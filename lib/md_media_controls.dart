@@ -125,7 +125,7 @@ class MdMediaControls {
         try {
           final HttpClientRequest request = await httpClient.getUrl(url);
           final HttpClientResponse response = await request.close();
-          await fileStreamToBase64(response);
+          fileData = await fileStreamToBase64(response);
         } catch (e) {
           httpClient.close(force: true);
         }
@@ -137,7 +137,9 @@ class MdMediaControls {
           await file.writeAsBytes(bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes));
           fileData = await fileStreamToBase64(file.openRead());
           file.delete();
-        } catch (e) {}
+        } catch (e) {
+          print(e);
+        }
       }
     }
     return await _CHANNEL.invokeMethod('info', {
@@ -151,10 +153,8 @@ class MdMediaControls {
     var tempData = '';
     final completer = Completer();
     stream.transform(base64.encoder)
-        .listen(
-            (contents) => tempData += contents,
-            onDone: () => completer.complete(),
-            onError:() => completer.completeError('transform error')
+        .listen((contents) => tempData += contents,
+            onDone: () => completer.complete()
     );
     await completer.future;
     return tempData;
