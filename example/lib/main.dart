@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:md_media_controls/md_media_controls.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 void main() => runApp(MyApp());
 
@@ -39,8 +40,11 @@ class MDMediaControlsTest extends StatelessWidget {
 
                 return Row(mainAxisSize: MainAxisSize.min, children: [
                   IconButton(
-                      onPressed: data == ControlsState.PLAYING ? null : () {
-                        mdMediaControls.play(url: kUrl);
+                      onPressed: data == ControlsState.PLAYING ? null : () async {
+                        await mdMediaControls.play(url: kUrl);
+                        await mdMediaControls.setInfo(title: 'Some title', artist: 'some artist',
+                            imageUrl: 'https://pngimage.net/wp-content/uploads/2018/05/example-icon-png-4.png'
+                        );
                       },
                       iconSize: 64.0,
                       icon: Icon(Icons.play_arrow),
@@ -58,7 +62,17 @@ class MDMediaControlsTest extends StatelessWidget {
                       } : null,
                       iconSize: 64.0,
                       icon: Icon(Icons.stop),
-                      color: Colors.cyan),
+                      color: Colors.amberAccent),
+                  IconButton(
+                      onPressed: () async {
+                        await mdMediaControls.setInfo(title: 'Some title', artist: 'some artist',
+                            imageUrl: 'assets/test.png'
+                        );
+                      },
+                      iconSize: 64.0,
+                      icon: Icon(Icons.adb),
+                      color: Colors.amberAccent),
+
                 ]);
               },
             ),
@@ -74,14 +88,19 @@ class MDMediaControlsTest extends StatelessWidget {
                         max > 0.0 ? Center(
                           child: Text('$value/$max')
                         ) : Container(),
-                        Slider(
-                        onChanged: (double seconds) {
-                          mdMediaControls.seek(seconds);
-                        },
-                        min: 0.0,
-                        value: value,
-                        max: max
-                    )
+                        value >= 0.0 && value <= max ? Slider(
+                          onChanged: (double seconds) {
+                            mdMediaControls.seek(seconds);
+                          },
+                          min: 0.0,
+                          value: value,
+                          max: max
+                    ) : Slider(
+                          onChanged: null,
+                          min: 0.0,
+                          value: 0.0,
+                          max: max
+                      )
                   ],
                 );
               }

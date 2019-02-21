@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:convert' show utf8, base64;
 
 import 'package:flutter/services.dart';
 import 'package:meta/meta.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:path_provider/path_provider.dart';
 
 enum ControlsState {
   STOPPED,
@@ -108,5 +112,52 @@ class MdMediaControls {
   Future<void> seek(double seconds) async =>
       await _CHANNEL.invokeMethod('seek', {'position': seconds});
 
+  Future<void> setInfo({
+    @required String title,
+    @required String artist,
+    @required String imageUrl,
+  }) async {
+    var fileData = '';
+    if (imageUrl != null) {
+      if (_protocols.contains(imageUrl.split('://').first)) {
+        final url = Uri.parse(imageUrl);
+        final httpClient = HttpClient();
+        try {
+          final HttpClientRequest request = await httpClient.getUrl(url);
+          final HttpClientResponse response = await request.close();
+          await fileStreamToBase64(response);
+        } catch (e) {
+          httpClient.close(force: true);
+        }
+      } else {
+        try {
+          final ByteData bytes = await rootBundle.load(imageUrl);
+          final path = await getTemporaryDirectory();
+          final File file = new File('${path.path}/_temp.file');
+          await file.writeAsBytes(bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes));
+          fileData = await fileStreamToBase64(file.openRead());
+          file.delete();
+        } catch (e) {}
+      }
+    }
+    return await _CHANNEL.invokeMethod('info', {
+      'title': title,
+      'artist': artist,
+      'imageData': fileData
+    });
+  }
+
+  Future<String> fileStreamToBase64(Stream<dynamic> stream) async {
+    var tempData = '';
+    final completer = Completer();
+    stream.transform(base64.encoder)
+        .listen(
+            (contents) => tempData += contents,
+            onDone: () => completer.complete(),
+            onError:() => completer.completeError('transform error')
+    );
+    await completer.future;
+    return tempData;
+  }
 
 }

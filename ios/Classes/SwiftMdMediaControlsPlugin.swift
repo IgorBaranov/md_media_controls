@@ -4,7 +4,7 @@ import MediaPlayer
 import AVFoundation
 
 let player = AVPlayer();
-var playerItemObserver: Any?;
+var playerItemObserver: AnyObject?;
 var playerItem: AVPlayerItem?;
 var preventPositionChange = false;
 let mediaInfo = MPNowPlayingInfoCenter.default();
@@ -48,8 +48,6 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             }
             return .commandFailed;
         }
-    } else {
-        // Fallback on earlier versions
     }
     
     commandCenter.nextTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
@@ -62,36 +60,24 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         return .success;
     }
     
-    let interval = CMTime(seconds: 0.5,
-                          preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+    player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.01, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), queue: DispatchQueue.main) {
+        time in
+        if !preventPositionChange, let tt = playerItem {
+            mediaInfo.nowPlayingInfo?[MPNowPlayingInfoPropertyElapsedPlaybackTime]  = tt.currentTime().seconds;
+        }
+    }
     
-    player.addPeriodicTimeObserver(forInterval: interval, queue: DispatchQueue.main) {
+    player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), queue: DispatchQueue.main) {
         time in
         if let tt = playerItem {
             mediaControlsChannel?.invokeMethod("audio.position", arguments: Int(tt.currentTime().seconds));
-            if !preventPositionChange {
-                mediaInfo.nowPlayingInfo?[MPNowPlayingInfoPropertyElapsedPlaybackTime]  = tt.currentTime().seconds;
-            }
         }
     }
     
     registrar.addMethodCallDelegate(instance, channel: mediaControlsChannel!)
   }
-    
-  @available(iOS 10.0, *)
-  public class func setupNowPlaying(playerItem: AVPlayerItem, player: AVPlayer) -> [String : Any] {
-        // Define Now Playing Info
-     var nowPlayingInfo = [String : Any]()
-     nowPlayingInfo[MPMediaItemPropertyTitle] = "My title";
-     nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = playerItem.currentTime().seconds
-     nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = playerItem.asset.duration.seconds
-     nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = player.rate
-        
-        // Set the metadata
-    return nowPlayingInfo;
-  }
   
-  public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+  public func handle(_ call: FlutterMethodCall, result: FlutterResult) {
     switch call.method {
     case "play":
         mediaControlsChannel?.invokeMethod("audio.prepare", arguments: nil)
@@ -102,7 +88,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         playerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!);
         
         if let tt = playerItemObserver {
-            (tt as AnyObject).invalidate();
+            tt.invalidate();
         }
         
         playerItemObserver = playerItem?.observe(\.status, options: [.new, .old], changeHandler: { (playerItem, change) in
@@ -111,12 +97,10 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             }
         });
         
-        if let tt = playerItem {
-            if #available(iOS 10.0, *) {
-                mediaInfo.nowPlayingInfo = SwiftMdMediaControlsPlugin.setupNowPlaying(playerItem: tt, player: player)
-            } else {
-                // Fallback on earlier versions
-            };
+        if #available(iOS 10.0, *) {
+            mediaInfo.nowPlayingInfo?[MPNowPlayingInfoPropertyElapsedPlaybackTime] = playerItem?.currentTime().seconds;
+            mediaInfo.nowPlayingInfo?[MPMediaItemPropertyPlaybackDuration] = playerItem?.asset.duration.seconds;
+            mediaInfo.nowPlayingInfo?[MPNowPlayingInfoPropertyPlaybackRate] = player.rate;
         }
         
         player.replaceCurrentItem(with: playerItem);
@@ -156,6 +140,34 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         return result(true);
     case "stop":
         player.pause();
+        player.replaceCurrentItem(with: nil);
+        return result(true);
+        
+    case "info":
+        let args = (call.arguments as! NSDictionary);
+        
+        if let title = args.value(forKey: "title") {
+            mediaInfo.nowPlayingInfo?[MPMediaItemPropertyTitle] = title as! String;
+        }
+        
+        if let artist = args.value(forKey: "artist") {
+            mediaInfo.nowPlayingInfo?[MPMediaItemPropertyArtist] = artist as! String;
+        }
+        if #available(iOS 10.0, *) {
+            if let imageUrl = args.value(forKey: "imageData") {
+                if ((imageUrl as! String).count > 0) {
+//                    
+//                    if let image = UIImage(named: "lockscreen") {
+//                        mediaInfo.nowPlayingInfo?[MPMediaItemPropertyArtwork] =
+//                            MPMediaItemArtwork(boundsSize: image.size) { size in
+//                                return image;
+//                        }
+//                    }
+                }
+            }
+        }
+        
+        
         return result(true);
     default:
         result(FlutterMethodNotImplemented)
