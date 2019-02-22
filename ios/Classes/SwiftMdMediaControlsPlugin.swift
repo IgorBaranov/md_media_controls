@@ -7,7 +7,6 @@ let player = AVPlayer();
 var playerItemObserver: AnyObject?;
 var playerItem: AVPlayerItem?;
 var preventPositionChange = false;
-let mediaInfo = MPNowPlayingInfoCenter.default();
 var mediaControlsChannel: FlutterMethodChannel?;
 
 
@@ -15,6 +14,9 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
   public static func register(with registrar: FlutterPluginRegistrar) {
     mediaControlsChannel = FlutterMethodChannel(name: "md_media_controls", binaryMessenger: registrar.messenger())
     let instance = SwiftMdMediaControlsPlugin()
+    
+    let mediaInfo = MPNowPlayingInfoCenter.default();
+    
     
     let commandCenter = MPRemoteCommandCenter.shared()
     
@@ -60,10 +62,11 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         return .success;
     }
     
+    
     player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.01, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), queue: DispatchQueue.main) {
         time in
-        if !preventPositionChange, let tt = playerItem {
-            mediaInfo.nowPlayingInfo?[MPNowPlayingInfoPropertyElapsedPlaybackTime]  = tt.currentTime().seconds;
+        if let tt = playerItem {
+            mediaInfo.nowPlayingInfo![MPNowPlayingInfoPropertyElapsedPlaybackTime]  = tt.currentTime().seconds;
         }
     }
     
@@ -97,12 +100,18 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             }
         });
         
-        if #available(iOS 10.0, *) {
-            mediaInfo.nowPlayingInfo?[MPNowPlayingInfoPropertyElapsedPlaybackTime] = playerItem?.currentTime().seconds;
-            mediaInfo.nowPlayingInfo?[MPMediaItemPropertyPlaybackDuration] = playerItem?.asset.duration.seconds;
-            mediaInfo.nowPlayingInfo?[MPNowPlayingInfoPropertyPlaybackRate] = player.rate;
+        let mediaInfo = MPNowPlayingInfoCenter.default();
+        if mediaInfo.nowPlayingInfo != nil {
+            mediaInfo.nowPlayingInfo![MPNowPlayingInfoPropertyElapsedPlaybackTime] = playerItem?.currentTime().seconds;
+            mediaInfo.nowPlayingInfo![MPMediaItemPropertyPlaybackDuration] = playerItem?.asset.duration.seconds;
+            mediaInfo.nowPlayingInfo![MPNowPlayingInfoPropertyPlaybackRate] = player.rate;
+        } else {
+            var newInfo = [String: Any]();
+            newInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = playerItem?.currentTime().seconds;
+            newInfo[MPMediaItemPropertyPlaybackDuration] = playerItem?.asset.duration.seconds;
+            newInfo[MPNowPlayingInfoPropertyPlaybackRate] = player.rate;
+            mediaInfo.nowPlayingInfo = newInfo;
         }
-        
         player.replaceCurrentItem(with: playerItem);
         
         if #available(iOS 10.0, *) {
@@ -145,6 +154,10 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         
     case "info":
         let args = (call.arguments as! NSDictionary);
+        let mediaInfo = MPNowPlayingInfoCenter.default();
+        if mediaInfo.nowPlayingInfo == nil {
+            mediaInfo.nowPlayingInfo = [String: Any]();
+        }
         
         if let title = args.value(forKey: "title") {
             mediaInfo.nowPlayingInfo?[MPMediaItemPropertyTitle] = title as! String;
@@ -154,15 +167,16 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             mediaInfo.nowPlayingInfo?[MPMediaItemPropertyArtist] = artist as! String;
         }
         if #available(iOS 10.0, *) {
-            if let imageUrl = args.value(forKey: "imageData") {
-                if ((imageUrl as! String).count > 0) {
-//                    
-//                    if let image = UIImage(named: "lockscreen") {
-//                        mediaInfo.nowPlayingInfo?[MPMediaItemPropertyArtwork] =
-//                            MPMediaItemArtwork(boundsSize: image.size) { size in
-//                                return image;
-//                        }
-//                    }
+            if let imageData = args.value(forKey: "imageData") {
+                if ((imageData as! String).count > 0) {
+                    if let data = Data(base64Encoded: imageData as! String) {
+                        if let image = UIImage(data: data) {
+                            mediaInfo.nowPlayingInfo?[MPMediaItemPropertyArtwork] =
+                                MPMediaItemArtwork(boundsSize: image.size) { size in
+                                    return image;
+                            }
+                        }
+                    }
                 }
             }
         }
