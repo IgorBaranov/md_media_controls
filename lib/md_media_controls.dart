@@ -118,19 +118,14 @@ class MdMediaControls {
     @required String imageUrl,
   }) async {
     var fileData = '';
+    var isLocal = false;
     if (imageUrl != null) {
       if (_protocols.contains(imageUrl.split('://').first)) {
-        final url = Uri.parse(imageUrl);
-        final httpClient = HttpClient();
-        try {
-          final HttpClientRequest request = await httpClient.getUrl(url);
-          final HttpClientResponse response = await request.close();
-          fileData = await fileStreamToBase64(response);
-        } catch (e) {
-          httpClient.close(force: true);
-        }
+        fileData = imageUrl;
       } else {
+        isLocal = true;
         try {
+          // TODO find better way to convert
           final ByteData bytes = await rootBundle.load(imageUrl);
           final path = await getTemporaryDirectory();
           final File file = new File('${path.path}/_temp.file');
@@ -145,7 +140,8 @@ class MdMediaControls {
     return await _CHANNEL.invokeMethod('info', {
       'title': title,
       'artist': artist,
-      'imageData': fileData
+      'imageData': fileData,
+      'isLocal': isLocal
     });
   }
 

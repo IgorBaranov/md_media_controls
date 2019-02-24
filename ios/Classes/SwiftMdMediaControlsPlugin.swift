@@ -53,7 +53,6 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                 if let observer = playerItemObserver {
                     UIApplication.shared.beginIgnoringInteractionEvents();
                     print(observer);
-                    print("sdfgsdfgsdfg sdfgsdfgsdfg")
                     player.removeTimeObserver(observer);
                     playerItemObserver = nil;
                 }
@@ -176,13 +175,30 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             if #available(iOS 10.0, *) {
                 if let imageData = args.value(forKey: "imageData") {
                     if ((imageData as! String).count > 0) {
-                        if let data = Data(base64Encoded: imageData as! String) {
-                            if let image = UIImage(data: data) {
-                                mediaInfo.nowPlayingInfo?[MPMediaItemPropertyArtwork] =
-                                    MPMediaItemArtwork(boundsSize: image.size) { size in
-                                        return image;
+                        if let isLocal = args.value(forKey: "isLocal") {
+                            if (isLocal as! Int == 1) {
+                                do {
+                                    let data = try Data(contentsOf: URL(string: imageData as! String)!);
+                                    if let image = UIImage(data: data) {
+                                        mediaInfo.nowPlayingInfo?[MPMediaItemPropertyArtwork] =
+                                            MPMediaItemArtwork(boundsSize: image.size) { size in
+                                                return image;
+                                        }
+                                    }
+                                } catch {
+                                    // TODO add error handler
+                                }
+                            } else {
+                                if let data = Data(base64Encoded: imageData as! String) {
+                                    if let image = UIImage(data: data) {
+                                        mediaInfo.nowPlayingInfo?[MPMediaItemPropertyArtwork] =
+                                            MPMediaItemArtwork(boundsSize: image.size) { size in
+                                                return image;
+                                        }
+                                    }
                                 }
                             }
+
                         }
                     }
                 }
