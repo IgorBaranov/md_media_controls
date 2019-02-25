@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert' show utf8, base64;
+import 'dart:isolate';
+import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:meta/meta.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -53,7 +56,6 @@ class MdMediaControls {
   Stream<ControlsActions> get onControlsFired => _controlsController.stream;
 
   Stream<double> get onRateChanged => _playerRateController.stream;
-
 
   MdMediaControls() {
     _CHANNEL.setMethodCallHandler(_channelMethodHandler);
@@ -138,13 +140,7 @@ class MdMediaControls {
       } else {
         isLocal = true;
         try {
-          // TODO find better way to convert
-          final ByteData bytes = await rootBundle.load(imageUrl);
-          final path = await getTemporaryDirectory();
-          final File file = new File('${path.path}/_temp.file');
-          await file.writeAsBytes(bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes));
-          fileData = await fileStreamToBase64(file.openRead());
-          file.delete();
+          fileData = await fileStreamToBase64(imageUrl);
         } catch (e) {
           print(e);
         }
@@ -158,15 +154,28 @@ class MdMediaControls {
     });
   }
 
-  Future<String> fileStreamToBase64(Stream<dynamic> stream) async {
-    var tempData = '';
+  static Future<String>  fileStreamToBase64(String url) async {
+    final ByteData bytes = await rootBundle.load(url);
+    final path = await getTemporaryDirectory();
+    tempFile = new File('${path.path}/_temp.file');
+    final buffer = bytes.buffer;
+    await compute(_bufferToBase64, buffer);
     final completer = Completer();
+    final stream = tempfile.openRead();
     stream.transform(base64.encoder)
         .listen((contents) => tempData += contents,
-            onDone: () => completer.complete()
+        onDone: () => completer.complete()
     );
     await completer.future;
+    tempfile.delete();
     return tempData;
+  }
+
+  static File tempFile;
+
+  static _bufferToBase64(ByteData bytes) {
+    tempFile.writeAsBytesSync(bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes));
+    return '';
   }
 
 }
