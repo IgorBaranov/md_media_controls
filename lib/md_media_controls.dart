@@ -33,6 +33,8 @@ class MdMediaControls {
   final StreamController<
       ControlsState> _playerStateController = StreamController.broadcast();
 
+  final StreamController<double> _playerRateController = StreamController.broadcast();
+
   final StreamController<Duration> _positionController = StreamController
       .broadcast();
 
@@ -49,6 +51,8 @@ class MdMediaControls {
   Stream<Duration> get positionChanged => _positionController.stream;
 
   Stream<ControlsActions> get onControlsFired => _controlsController.stream;
+
+  Stream<double> get onRateChanged => _playerRateController.stream;
 
 
   MdMediaControls() {
@@ -84,6 +88,9 @@ class MdMediaControls {
         _playerStateController.add(ControlsState.PAUSED);
         _state = ControlsState.PAUSED;
         break;
+      case 'audio.rage':
+        _playerRateController.add(call.arguments);
+        break;
       case 'audio.controls.next':
         _controlsController.add(ControlsActions.NEXT);
         break;
@@ -99,11 +106,14 @@ class MdMediaControls {
     }
   }
 
-  Future<void> play({@required String url}) async =>
+  Future<void> playNew({@required String url}) async =>
       await _CHANNEL.invokeMethod('play', {
         'url': url,
         'isLocal': !_protocols.contains(url.split('://').first)
       });
+
+  Future<void> play({@required String url}) async =>
+      await _CHANNEL.invokeMethod('playPrev');
 
   Future<void> pause() async => await _CHANNEL.invokeMethod('pause');
 
@@ -111,6 +121,9 @@ class MdMediaControls {
 
   Future<void> seek(double seconds) async =>
       await _CHANNEL.invokeMethod('seek', {'position': seconds});
+
+  Future<void> rate({double rate = 0.0}) async =>
+      await _CHANNEL.invokeMethod('rate', {'rate': rate});
 
   Future<void> setInfo({
     @required String title,

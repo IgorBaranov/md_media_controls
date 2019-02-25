@@ -41,7 +41,8 @@ class MDMediaControlsTest extends StatelessWidget {
                 return Row(mainAxisSize: MainAxisSize.min, children: [
                   IconButton(
                       onPressed: data == ControlsState.PLAYING ? null : () async {
-                        await mdMediaControls.play(url: kUrl);
+                        await mdMediaControls.playNew(url: kUrl);
+                        await mdMediaControls.rate(rate: 0.7);
                         await mdMediaControls.setInfo(title: 'Some title', artist: 'some artist',
                             imageUrl: 'https://pngimage.net/wp-content/uploads/2018/05/example-icon-png-4.png'
                         );
@@ -65,7 +66,7 @@ class MDMediaControlsTest extends StatelessWidget {
                       color: Colors.amberAccent),
                   IconButton(
                       onPressed: () async {
-                        await mdMediaControls.setInfo(title: 'Some title', artist: 'some artist',
+                        await mdMediaControls.setInfo(title: 'Some title 123', artist: 'some artist 123',
                             imageUrl: 'assets/test.png'
                         );
                       },
