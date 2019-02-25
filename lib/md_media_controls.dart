@@ -132,50 +132,16 @@ class MdMediaControls {
     @required String artist,
     @required String imageUrl,
   }) async {
-    var fileData = '';
-    var isLocal = false;
-    if (imageUrl != null) {
-      if (_protocols.contains(imageUrl.split('://').first)) {
-        fileData = imageUrl;
-      } else {
-        isLocal = true;
-        try {
-          fileData = await fileStreamToBase64(imageUrl);
-        } catch (e) {
-          print(e);
-        }
-      }
+    var isLocal = true;
+    if (_protocols.contains(imageUrl.split('://').first)) {
+      isLocal = false;
     }
     return await _CHANNEL.invokeMethod('info', {
       'title': title,
       'artist': artist,
-      'imageData': fileData,
+      'imageData': imageUrl,
       'isLocal': isLocal
     });
-  }
-
-  static Future<String>  fileStreamToBase64(String url) async {
-    final ByteData bytes = await rootBundle.load(url);
-    final path = await getTemporaryDirectory();
-    tempFile = new File('${path.path}/_temp.file');
-    final buffer = bytes.buffer;
-    await compute(_bufferToBase64, buffer);
-    final completer = Completer();
-    final stream = tempfile.openRead();
-    stream.transform(base64.encoder)
-        .listen((contents) => tempData += contents,
-        onDone: () => completer.complete()
-    );
-    await completer.future;
-    tempfile.delete();
-    return tempData;
-  }
-
-  static File tempFile;
-
-  static _bufferToBase64(ByteData bytes) {
-    tempFile.writeAsBytesSync(bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes));
-    return '';
   }
 
 }

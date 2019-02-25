@@ -2,6 +2,7 @@ import UIKit
 import Flutter
 import MediaPlayer
 import AVFoundation
+import CoreFoundation
 
 let player = AVPlayer();
 var playerItemObserver: AnyObject?;
@@ -9,11 +10,13 @@ var playerItem: AVPlayerItem?;
 var preventPositionChange = false;
 var mediaControlsChannel: FlutterMethodChannel?;
 var mediaInfoData = [String: Any]();
+var registrarTemp: FlutterPluginRegistrar?;
 
 public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
     public static func register(with registrar: FlutterPluginRegistrar) {
         mediaControlsChannel = FlutterMethodChannel(name: "md_media_controls", binaryMessenger: registrar.messenger())
         let instance = SwiftMdMediaControlsPlugin()
+        registrarTemp = registrar;
         
         let commandCenter = MPRemoteCommandCenter.shared();
         
@@ -172,20 +175,30 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                         var data: Data;
                         if let isLocal = args.value(forKey: "isLocal") {
                             if (isLocal as! Int == 1) {
-                                data = Data(base64Encoded: imageData as! String)!;
+                                if let reg = registrarTemp {
+                                    let key = reg.lookupKey(forAsset: imageData as! String);
+                                    let path = Bundle.main.path(forAuxiliaryExecutable: key);
+                                    if let image = UIImage(contentsOfFile: path!) {
+                                        mediaInfoData[MPMediaItemPropertyArtwork] =
+                                            MPMediaItemArtwork(boundsSize: image.size) { size in
+                                                return image;
+                                        }
+                                        MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
+                                    }
+                                }
                             } else {
                                 do {
                                     data = try Data(contentsOf: URL(string: imageData as! String)!);
+                                    if let image = UIImage(data: data) {
+                                        mediaInfoData[MPMediaItemPropertyArtwork] =
+                                            MPMediaItemArtwork(boundsSize: image.size) { size in
+                                                return image;
+                                        }
+                                        MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
+                                    }
                                 } catch {
                                     return result(true);
                                 }
-                            }
-                            if let image = UIImage(data: data) {
-                                mediaInfoData[MPMediaItemPropertyArtwork] =
-                                    MPMediaItemArtwork(boundsSize: image.size) { size in
-                                        return image;
-                                }
-                                MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
                             }
                         }
                     }
