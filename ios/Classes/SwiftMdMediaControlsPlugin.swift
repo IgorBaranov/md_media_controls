@@ -13,10 +13,15 @@ var mediaInfoData = [String: Any]();
 var registrarTemp: FlutterPluginRegistrar?;
 
 public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
+    var registrar: FlutterPluginRegistrar;
+    
+    init(pluginRegistrar: FlutterPluginRegistrar) {
+        registrar = pluginRegistrar;
+    }
+    
     public static func register(with registrar: FlutterPluginRegistrar) {
         mediaControlsChannel = FlutterMethodChannel(name: "md_media_controls", binaryMessenger: registrar.messenger())
-        let instance = SwiftMdMediaControlsPlugin()
-        registrarTemp = registrar;
+        let instance = SwiftMdMediaControlsPlugin(pluginRegistrar: registrar);
         
         let commandCenter = MPRemoteCommandCenter.shared();
         
@@ -175,16 +180,14 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                         var data: Data;
                         if let isLocal = args.value(forKey: "isLocal") {
                             if (isLocal as! Int == 1) {
-                                if let reg = registrarTemp {
-                                    let key = reg.lookupKey(forAsset: imageData as! String);
-                                    let path = Bundle.main.path(forAuxiliaryExecutable: key);
-                                    if let image = UIImage(contentsOfFile: path!) {
-                                        mediaInfoData[MPMediaItemPropertyArtwork] =
-                                            MPMediaItemArtwork(boundsSize: image.size) { size in
-                                                return image;
-                                        }
-                                        MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
+                                let key = self.registrar.lookupKey(forAsset: imageData as! String);
+                                let path = Bundle.main.path(forAuxiliaryExecutable: key);
+                                if let image = UIImage(contentsOfFile: path!) {
+                                    mediaInfoData[MPMediaItemPropertyArtwork] =
+                                        MPMediaItemArtwork(boundsSize: image.size) { size in
+                                            return image;
                                     }
+                                    MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
                                 }
                             } else {
                                 do {
