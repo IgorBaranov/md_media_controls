@@ -7,28 +7,28 @@ import CoreFoundation
 let player = AVPlayer();
 var playerItemObserver: AnyObject?;
 var playerItem: AVPlayerItem?;
-var preventPositionChange = false;
-var mediaControlsChannel: FlutterMethodChannel?;
 var mediaInfoData = [String: Any]();
-var registrarTemp: FlutterPluginRegistrar?;
 
 public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
     var registrar: FlutterPluginRegistrar;
+    var currentRate: Double = 0.0;
+    var channel: FlutterMethodChannel;
     
-    init(pluginRegistrar: FlutterPluginRegistrar) {
+    init(pluginRegistrar: FlutterPluginRegistrar, pluginChannel: FlutterMethodChannel) {
         registrar = pluginRegistrar;
+        channel = pluginChannel;
     }
     
     public static func register(with registrar: FlutterPluginRegistrar) {
-        mediaControlsChannel = FlutterMethodChannel(name: "md_media_controls", binaryMessenger: registrar.messenger())
-        let instance = SwiftMdMediaControlsPlugin(pluginRegistrar: registrar);
+        let mediaControlsChannel = FlutterMethodChannel(name: "md_media_controls", binaryMessenger: registrar.messenger())
+        let instance = SwiftMdMediaControlsPlugin(pluginRegistrar: registrar, pluginChannel: mediaControlsChannel);
         
         let commandCenter = MPRemoteCommandCenter.shared();
         
         commandCenter.playCommand.addTarget(handler: { (event) -> MPRemoteCommandHandlerStatus in
             if player.rate == 0.0 {
-                mediaControlsChannel?.invokeMethod("audio.play", arguments: nil);
                 player.play();
+                mediaControlsChannel.invokeMethod("audio.play", arguments: nil);
                 return .success
             }
             return .commandFailed
@@ -37,8 +37,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         
         commandCenter.pauseCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
             if player.rate > 0.0 {
-                mediaControlsChannel?.invokeMethod("audio.pause", arguments: nil);
-                player.pause()
+                player.pause();
+                mediaControlsChannel.invokeMethod("audio.pause", arguments: nil);
                 return .success
             }
             return .commandFailed
@@ -46,24 +46,21 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         
         if #available(iOS 9.1, *) {
             UIApplication.shared.beginReceivingRemoteControlEvents();
-            player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), queue: DispatchQueue.main) {
+            player.addPeriodicTimeObserver(forInterval: CMTimeMakeWithSeconds(1, 1), queue: nil) {
                 time in
                 if let tt = playerItem {
                     let currentTime = tt.currentTime().seconds;
-                    mediaControlsChannel?.invokeMethod("audio.position", arguments: Int(currentTime));
                     mediaInfoData[MPNowPlayingInfoPropertyElapsedPlaybackTime]  = currentTime;
                     MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
+                    mediaControlsChannel.invokeMethod("audio.position", arguments: Int(currentTime));
                 }
             }
             
             commandCenter.changePlaybackPositionCommand.addTarget { (remoteEvent) -> MPRemoteCommandHandlerStatus in
                 if let event = remoteEvent as? MPChangePlaybackPositionCommandEvent {
-                    player.seek(to: CMTime(seconds: event.positionTime, preferredTimescale: CMTimeScale(1000)), completionHandler: {_ in
-                        if let tt = playerItem {
-                            mediaInfoData[MPNowPlayingInfoPropertyElapsedPlaybackTime]  = tt.currentTime().seconds;
-                            MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
-                        }
-                    });
+                    mediaInfoData[MPNowPlayingInfoPropertyElapsedPlaybackTime] = Double(event.positionTime);
+                    MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
+                    player.seek(to: CMTimeMake(Int64(event.positionTime), 1));
                     return .success;
                 }
                 return .commandFailed;
@@ -71,22 +68,22 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         }
         
         commandCenter.nextTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-            mediaControlsChannel?.invokeMethod("audio.controls.next", arguments: nil);
+            mediaControlsChannel.invokeMethod("audio.controls.next", arguments: nil);
             return .success;
         }
         
         commandCenter.previousTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-            mediaControlsChannel?.invokeMethod("audio.controls.prev", arguments: nil);
+            mediaControlsChannel.invokeMethod("audio.controls.prev", arguments: nil);
             return .success;
         }
         
-        registrar.addMethodCallDelegate(instance, channel: mediaControlsChannel!)
+        registrar.addMethodCallDelegate(instance, channel: mediaControlsChannel)
     }
     
     public func handle(_ call: FlutterMethodCall, result: FlutterResult) {
         switch call.method {
         case "play":
-            mediaControlsChannel?.invokeMethod("audio.prepare", arguments: nil)
+            self.channel.invokeMethod("audio.prepare", arguments: nil)
             
             let args = (call.arguments as! NSDictionary);
             let urlString = args.object(forKey: "url") as! String;
@@ -99,43 +96,45 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             
             playerItemObserver = playerItem?.observe(\.status, options: [.new, .old], changeHandler: { (playerItem, change) in
                 if (playerItem.status == .readyToPlay && !playerItem.duration.seconds.isNaN) {
-                    mediaControlsChannel?.invokeMethod("audio.duration", arguments: Int(playerItem.duration.seconds));
+                    self.channel.invokeMethod("audio.duration", arguments: Int(playerItem.duration.seconds));
                 }
             });
             
             player.replaceCurrentItem(with: playerItem);
-            
+            let rate = args.object(forKey: "rate") as! Double;
+            player.rate = Float(rate);
+            self.currentRate = rate;
             UIApplication.shared.beginReceivingRemoteControlEvents();
             mediaInfoData[MPNowPlayingInfoPropertyElapsedPlaybackTime] = playerItem?.currentTime().seconds;
             mediaInfoData[MPMediaItemPropertyPlaybackDuration] = playerItem?.asset.duration.seconds;
             mediaInfoData[MPNowPlayingInfoPropertyPlaybackRate] = player.rate;
             
             if #available(iOS 10.0, *) {
-                player.playImmediately(atRate: 1)
+                player.playImmediately(atRate: Float(rate))
             } else {
                 player.play();
             };
             
             MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
-            mediaControlsChannel?.invokeMethod("audio.rate", arguments: 1.0)
-            mediaControlsChannel?.invokeMethod("audio.duration", arguments: playerItem?.duration.seconds)
+            self.channel.invokeMethod("audio.rate", arguments: 1.0)
+            self.channel.invokeMethod("audio.duration", arguments: playerItem?.duration.seconds)
             
             do {
                 try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback, with: []);
                 try AVAudioSession.sharedInstance().setActive(true);
-                mediaControlsChannel?.invokeMethod("audio.play", arguments: nil);
+                self.channel.invokeMethod("audio.play", arguments: nil);
             } catch let error {
-                mediaControlsChannel?.invokeMethod("error", arguments: error.localizedDescription);
+                self.channel.invokeMethod("error", arguments: error.localizedDescription);
                 return result(false);
             }
             return result(true);
         case "pause":
             player.pause();
-            mediaControlsChannel?.invokeMethod("audio.pause", arguments: nil);
+            self.channel.invokeMethod("audio.pause", arguments: nil);
             return result(true);
         case "playPrev":
             if #available(iOS 10.0, *) {
-                player.playImmediately(atRate: player.rate);
+                player.playImmediately(atRate: Float(self.currentRate));
             } else {
                 player.play();
             }
@@ -160,7 +159,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             let args = (call.arguments as! NSDictionary);
             let rate = args.object(forKey: "rate") as! Double;
             player.rate = Float(rate);
-            mediaControlsChannel?.invokeMethod("audio.rate", arguments: rate)
+            self.currentRate = Double(player.rate);
+            self.channel.invokeMethod("audio.rate", arguments: rate)
             return result(true);
         case "info":
             let args = (call.arguments as! NSDictionary);
@@ -174,6 +174,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                 mediaInfoData[MPMediaItemPropertyArtist] = artist as! String;
             }
             MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
+            result(true);
             if #available(iOS 10.0, *) {
                 if let imageData = args.value(forKey: "imageData") {
                     if ((imageData as! String).count > 0) {
@@ -200,14 +201,17 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                                         MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
                                     }
                                 } catch {
-                                    return result(true);
+                                    // TODO add error handler
                                 }
                             }
                         }
                     }
                 }
             }
-            
+            break;
+        case "clearInfo":
+            mediaInfoData = [String: Any]();
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
             return result(true);
         default:
             result(FlutterMethodNotImplemented)
