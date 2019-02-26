@@ -1,14 +1,8 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:convert' show utf8, base64;
-import 'dart:isolate';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:meta/meta.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:path_provider/path_provider.dart';
 
 enum ControlsState {
   STOPPED,
@@ -108,10 +102,11 @@ class MdMediaControls {
     }
   }
 
-  Future<void> playNew({@required String url}) async =>
+  Future<void> playNew({@required String url, rate = 0.0}) async =>
       await _CHANNEL.invokeMethod('play', {
         'url': url,
-        'isLocal': !_protocols.contains(url.split('://').first)
+        'isLocal': !_protocols.contains(url.split('://').first),
+        'rate': rate
       });
 
   Future<void> play({@required String url}) async =>
@@ -143,5 +138,7 @@ class MdMediaControls {
       'isLocal': isLocal
     });
   }
+
+  Future<void> clearInfo() async => await _CHANNEL.invokeMethod('clearInfo');
 
 }
