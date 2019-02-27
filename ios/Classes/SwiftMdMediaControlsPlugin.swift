@@ -147,7 +147,11 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                 tt.seek(to: CMTimeMakeWithSeconds(position, 60000));
             }
             if (player.rate == 0.0) {
-                player.play();
+                if #available(iOS 10.0, *) {
+                    player.playImmediately(atRate: Float(self.currentRate))
+                } else {
+                    player.play();
+                };
             }
             return result(true);
         case "stop":
@@ -161,6 +165,14 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             player.rate = Float(rate);
             self.currentRate = Double(player.rate);
             self.channel.invokeMethod("audio.rate", arguments: rate)
+            return result(true);
+        case "infoControls":
+            let args = (call.arguments as! NSDictionary);
+            let commandCenter = MPRemoteCommandCenter.shared();
+            commandCenter.playCommand.isEnabled = args.object(forKey: "play") as! Int == 1;
+            commandCenter.pauseCommand.isEnabled = args.object(forKey: "pause") as! Int == 1;
+            commandCenter.previousTrackCommand.isEnabled = args.object(forKey: "prev") as! Int == 1;
+            commandCenter.nextTrackCommand.isEnabled = args.object(forKey: "next") as! Int == 1;
             return result(true);
         case "info":
             let args = (call.arguments as! NSDictionary);

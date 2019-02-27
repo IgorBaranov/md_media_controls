@@ -40,6 +40,8 @@ class MdMediaControls {
 
   ControlsState _state = ControlsState.STOPPED;
 
+  ControlsState get state => _state;
+
   Duration get duration => _duration;
 
   Stream<ControlsState> get onPlayerStateChanged =>
@@ -138,6 +140,18 @@ class MdMediaControls {
       'isLocal': isLocal
     });
   }
+
+  Future<void> infoControls({
+    bool pause = true,
+    bool play = true,
+    bool prev = true,
+    bool next = true
+  }) async => await _CHANNEL.invokeMethod('infoControls', {
+    'pause': pause,
+    'play': play,
+    'prev': prev,
+    'next': next
+  });
 
   Future<void> clearInfo() async => await _CHANNEL.invokeMethod('clearInfo');
 
