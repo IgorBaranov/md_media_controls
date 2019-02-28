@@ -10,8 +10,8 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 
 class MdMediaControlsPlugin(channel: MethodChannel, registrar: Registrar) : MethodCallHandler {
-//    private var AudioManager audioManager;
-//    private var MediaPlayer mediaPlayer;
+//    private var audioManager = AudioManager();
+    private var mediaPlayer = MediaPlayer();
 
     companion object {
         @JvmStatic
