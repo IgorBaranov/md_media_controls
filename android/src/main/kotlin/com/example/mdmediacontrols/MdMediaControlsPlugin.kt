@@ -6,29 +6,32 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry.Registrar
 
-import android.media.AudioManager;
-import android.media.MediaPlayer;
+import android.media.AudioManager
+import android.media.MediaPlayer
 
 class MdMediaControlsPlugin(channel: MethodChannel, registrar: Registrar) : MethodCallHandler {
-//    private var audioManager = AudioManager();
-    private var mediaPlayer = MediaPlayer();
+//    private var audioManager = AudioManager()
+    private var mediaPlayer: MediaPlayer? = null
 
     companion object {
         @JvmStatic
         fun registerWith(registrar: Registrar) {
             val channel = MethodChannel(registrar.messenger(), "md_media_controls")
-            channel.setMethodCallHandler(MdMediaControlsPlugin(channel, registrar));
+            channel.setMethodCallHandler(MdMediaControlsPlugin(channel, registrar))
         }
     }
 
     override fun onMethodCall(call: MethodCall, result: Result) {
         when (call.method) {
             "play" -> {
-                var args = call.arguments as HashMap<String, Any>;
-                var isLocal = args.get("isLocal") as Boolean;
-                var url = args.get("url") as String;
-                var rate = args.get("rate") as Double;
-
+                val args = call.arguments as HashMap<String, Any>
+                val isLocal = args.get("isLocal") as Boolean
+                val url = args.get("url") as String
+                val rate = args.get("rate") as Double
+                if (this.mediaPlayer == null) {
+                    this.mediaPlayer = MediaPlayer()
+                    this.mediaPlayer
+                }
             }
             "pause" -> {
 
