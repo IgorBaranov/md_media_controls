@@ -9,8 +9,11 @@ import io.flutter.plugin.common.PluginRegistry.Registrar
 
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.os.Build
 import android.util.Log
 import java.io.IOException
+import android.app.NotificationChannel
+import android.app.NotificationManager
 
 class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : MethodCallHandler {
     private var mediaPlayer = MediaPlayer()
@@ -38,7 +41,6 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
         when (call.method) {
             "play" -> {
                 val args = call.arguments as HashMap<*, *>
-                val isLocal = args.get("isLocal") as Boolean
                 val url = args.get("url") as String
                 val rate = args.get("rate") as Double
                 this.mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC)
@@ -51,9 +53,13 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 } catch (error: IOException) {
                     Log.w("Play", "Invalid data source", error)
                     this.channel.invokeMethod("error", "play error")
-                    return
+                    return result.error("Playing error", "Invalid data source", null)
                 }
                 this.mediaPlayer.prepareAsync()
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(rate.toFloat())
+                }
 
                 this.mediaPlayer.setOnPreparedListener {
                     it.start()
@@ -73,8 +79,10 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 return result.success(true)
             }
             "pause" -> {
-                this.mediaPlayer.pause()
-                this.channel.invokeMethod("audio.pause", null)
+                if (this.mediaPlayer.isPlaying) {
+                    this.mediaPlayer.pause()
+                    this.channel.invokeMethod("audio.pause", null)
+                }
                 return result.success(true)
             }
             "playPrev" -> {
@@ -85,7 +93,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
             "seek" -> {
                 val args = call.arguments as HashMap<*, *>
                 val position = args.get("position") as Double
-                this.mediaPlayer.seekTo((position * 1000) as Int)
+                this.mediaPlayer.seekTo(position.toInt() * 1000)
                 return result.success(true)
             }
             "stop" -> {
@@ -95,12 +103,17 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 return result.success(true)
             }
             "rate" -> {
-
+                val args = call.arguments as HashMap<*, *>
+                val rate = args.get("rate") as Double
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(rate.toFloat())
+                }
             }
             "infoControls" -> {
-
+                val args = call.arguments as HashMap<*, *>
             }
             "info" -> {
+                val args = call.arguments as HashMap<*, *>
 
             }
             "clearInfo" -> {
