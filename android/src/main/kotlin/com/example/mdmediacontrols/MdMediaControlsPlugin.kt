@@ -108,16 +108,19 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(rate.toFloat())
                 }
+                return result.success(true)
             }
             "infoControls" -> {
-                val args = call.arguments as HashMap<*, *>
+                // TODO implement it
+                return result.success(true)
             }
             "info" -> {
-                val args = call.arguments as HashMap<*, *>
-
+                // TODO implement it
+                return result.success(true)
             }
             "clearInfo" -> {
-
+                // TODO implement it
+                return result.success(true)
             }
             else -> {
                 result.notImplemented()
