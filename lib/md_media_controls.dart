@@ -86,7 +86,7 @@ class MdMediaControls {
         _playerStateController.add(ControlsState.PAUSED);
         _state = ControlsState.PAUSED;
         break;
-      case 'audio.rage':
+      case 'audio.rate':
         _playerRateController.add(call.arguments);
         break;
       case 'audio.controls.next':

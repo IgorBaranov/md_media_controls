@@ -111,6 +111,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val rate = args.get("rate") as Double
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(rate.toFloat())
+                    this.channel.invokeMethod("audio.rate", rate.toFloat())
                 }
                 return result.success(true)
             }
