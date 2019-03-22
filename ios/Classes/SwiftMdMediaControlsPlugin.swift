@@ -90,6 +90,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             
             playerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!);
             
+            NotificationCenter.default.removeObserver(self)
+            
             if let tt = playerItemObserver {
                 tt.invalidate();
             }
@@ -99,6 +101,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                     self.channel.invokeMethod("audio.duration", arguments: Int(playerItem.duration.seconds));
                 }
             });
+            
+            NotificationCenter.default.addObserver(self, selector:#selector(self.playerDidFinishPlaying(note:)),name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: player.currentItem);
             
             player.replaceCurrentItem(with: playerItem);
             let rate = args.object(forKey: "rate") as! Double;
@@ -228,5 +232,9 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         default:
             result(FlutterMethodNotImplemented)
         }
+    }
+    
+    @objc func playerDidFinishPlaying(note: NSNotification){
+        channel.invokeMethod("audio.stop", arguments: nil)
     }
 }
