@@ -60,6 +60,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(rate.toFloat())
+                    this.channel.invokeMethod("audio.rate", rate.toFloat())
                 }
 
                 this.mediaPlayer.setOnPreparedListener {
