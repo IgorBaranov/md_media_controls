@@ -12,7 +12,7 @@ Android and/or iOS.
 For help getting started with Flutter, view our 
 [online documentation](https://flutter.io/docs), which offers tutorials, 
 samples, guidance on mobile development, and a full API reference.
-# AudioPlayer
+# MdMediaControls
 
 A Flutter audio plugin (Swift/Kotlin) to play remote or local audio files and control it on LockScreen(iOS only, Android part will be ready soon)
 
