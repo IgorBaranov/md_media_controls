@@ -44,7 +44,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val args = call.arguments as HashMap<*, *>
                 val url = args.get("url") as String
                 val rate = args.get("rate") as Double
-                this.mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC)
+//                this.mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC)
                 if (this.isOnPlay) {
                     this.mediaPlayer.release();
                     this.mediaPlayer = MediaPlayer()
