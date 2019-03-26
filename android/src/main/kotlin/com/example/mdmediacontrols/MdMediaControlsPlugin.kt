@@ -70,7 +70,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 }
 
                 this.mediaPlayer.setOnCompletionListener {
-                    this.channel.invokeMethod("audio.stop", null)
+                    this.channel.invokeMethod("audio.completed", null)
                 }
 
                 this.mediaPlayer.setOnErrorListener { _, _, _ ->
