@@ -1,6 +1,7 @@
 package com.example.mdmediacontrols
 
 import android.content.Context
+import android.content.res.AssetManager
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
@@ -9,6 +10,7 @@ import io.flutter.plugin.common.PluginRegistry.Registrar
 
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import java.io.IOException
@@ -22,11 +24,12 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     private val am: AudioManager
     private var isOnPlay = false
     private val handler = Handler()
+    private val context: Context
 
     init {
         this.channel.setMethodCallHandler(this)
-        val context = this.registrar.context().applicationContext
-        this.am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        this.context = this.registrar.context().applicationContext
+        this.am = this.context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
 
     companion object {
@@ -44,17 +47,30 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val args = call.arguments as HashMap<*, *>
                 val url = args.get("url") as String
                 val rate = args.get("rate") as Double
-                if (this.mediaPlayer != null) {
-                    this.mediaPlayer.release();
-                }
+                val isLocal = args.get("isLocal") as Boolean
+
+                this.mediaPlayer?.release()
                 this.mediaPlayer = MediaPlayer()
+
                 try {
-                    this.mediaPlayer.setDataSource(url)
+                    if (isLocal && (url.indexOf("assets") == 1 || url.indexOf("/assets") == 1)) {
+                        val assetManager = this.registrar.context().assets
+                        val key = this.registrar.lookupKeyForAsset(url)
+                        val fd = assetManager.openFd(key)
+                        if (fd.declaredLength < 0) {
+                            this.mediaPlayer.setDataSource(fd.fileDescriptor)
+                        } else {
+                            this.mediaPlayer.setDataSource(fd.fileDescriptor, fd.startOffset, fd.declaredLength)
+                        }
+                    } else {
+                        this.mediaPlayer.setDataSource(url)
+                    }
                 } catch (error: IOException) {
                     Log.w("Play", "Invalid data source", error)
                     this.channel.invokeMethod("error", "play error")
                     return result.error("Playing error", "Invalid data source", null)
                 }
+
                 this.mediaPlayer.prepareAsync()
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
