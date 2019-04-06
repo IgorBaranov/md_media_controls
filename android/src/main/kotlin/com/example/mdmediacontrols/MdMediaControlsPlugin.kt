@@ -113,6 +113,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
 
                 this.mediaPlayer.setOnCompletionListener {
                     this.channel.invokeMethod("audio.completed", null)
+                    this.isOnPlay = false
                 }
 
                 this.mediaPlayer.setOnErrorListener { _, _, _ ->
@@ -124,15 +125,17 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 return result.success(true)
             }
             "pause" -> {
-                if (this.mediaPlayer.isPlaying) {
+                if (this.mediaPlayer?.isPlaying && this.isOnPlay) {
                     this.mediaPlayer.pause()
                     this.channel.invokeMethod("audio.pause", null)
                 }
                 return result.success(true)
             }
             "playPrev" -> {
-                this.mediaPlayer.start()
-                this.channel.invokeMethod("audio.play", null)
+                if (!this.isOnPlay) {
+                    this.mediaPlayer.start()
+                    this.channel.invokeMethod("audio.play", null)
+                }
                 return result.success(true)
             }
             "seek" -> {

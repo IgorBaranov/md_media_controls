@@ -111,7 +111,7 @@ class MdMediaControls {
         'rate': rate
       });
 
-  Future<void> play({@required String url}) async =>
+  Future<void> play() async =>
       await _CHANNEL.invokeMethod('playPrev');
 
   Future<void> pause() async => await _CHANNEL.invokeMethod('pause');
