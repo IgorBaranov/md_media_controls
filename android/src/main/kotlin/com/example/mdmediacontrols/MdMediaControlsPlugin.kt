@@ -205,8 +205,8 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     handler.removeCallbacks(this)
                 }
                 val time = mediaPlayer.currentPosition
-                channel.invokeMethod("audio.position", time / 1000)
-                handler.postDelayed(this, 200)
+                channel.invokeMethod("audio.position", time)
+                handler.postDelayed(this, 100)
             } catch (error: Exception) {
                 Log.w("player", "Handler error", error)
             }

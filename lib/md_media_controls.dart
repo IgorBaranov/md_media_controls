@@ -68,7 +68,7 @@ class MdMediaControls {
         _positionController.add(Duration(seconds: 0));
         break;
       case 'audio.position':
-        _positionController.add(Duration(seconds: call.arguments));
+        _positionController.add(Duration(milliseconds: call.arguments));
         break;
       case 'audio.play':
         _playerStateController.add(ControlsState.PLAYING);

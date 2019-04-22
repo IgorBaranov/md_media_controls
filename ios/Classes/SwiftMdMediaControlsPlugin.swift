@@ -46,13 +46,13 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         
         if #available(iOS 9.1, *) {
             UIApplication.shared.beginReceivingRemoteControlEvents();
-            player.addPeriodicTimeObserver(forInterval: CMTimeMakeWithSeconds(1, 1), queue: nil) {
+            player.addPeriodicTimeObserver(forInterval: CMTimeMakeWithSeconds(0.1, Int32(NSEC_PER_SEC)), queue: nil) {
                 time in
                 if let tt = playerItem {
                     let currentTime = tt.currentTime().seconds;
                     mediaInfoData[MPNowPlayingInfoPropertyElapsedPlaybackTime]  = currentTime;
                     MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
-                    mediaControlsChannel.invokeMethod("audio.position", arguments: Int(currentTime));
+                    mediaControlsChannel.invokeMethod("audio.position", arguments: Int(currentTime * 1000));
                 }
             }
             
@@ -87,8 +87,21 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             
             let args = (call.arguments as! NSDictionary);
             let urlString = args.object(forKey: "url") as! String;
+            if let range = urlString.range(of: "assets") {
+                let position = urlString.distance(from: urlString.startIndex, to: range.lowerBound);
+                if (position == 1 || position == 0) {
+                    let asset = self.registrar.lookupKey(forAsset: urlString);
+                    let path = Bundle.main.path(forAuxiliaryExecutable: asset);
+                    playerItem = AVPlayerItem(url: URL(fileURLWithPath: path!));
+                } else {
+                    playerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!);
+                }
+            } else {
+                playerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!);
+            }
             
-            playerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!);
+            
+            
             
             NotificationCenter.default.removeObserver(self)
             
@@ -128,6 +141,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                 try AVAudioSession.sharedInstance().setActive(true);
                 self.channel.invokeMethod("audio.play", arguments: nil);
             } catch let error {
+                print(error);
                 self.channel.invokeMethod("error", arguments: error.localizedDescription);
                 return result(false);
             }
