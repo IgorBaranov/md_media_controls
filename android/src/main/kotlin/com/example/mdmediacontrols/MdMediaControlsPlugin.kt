@@ -114,6 +114,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 this.mediaPlayer.setOnCompletionListener {
                     this.channel.invokeMethod("audio.completed", null)
                     this.isOnPlay = false
+                    handler.removeCallbacks(this.sendData)
                 }
 
                 this.mediaPlayer.setOnErrorListener { _, _, _ ->
