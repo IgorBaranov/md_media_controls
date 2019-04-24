@@ -110,9 +110,9 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             }
             
             playerItemObserver = playerItem?.observe(\.status, options: [.new, .old], changeHandler: { (playerItem, change) in
-                if (playerItem.status == .readyToPlay && !playerItem.duration.seconds.isNaN) {
-                    self.channel.invokeMethod("audio.duration", arguments: Int(playerItem.duration.seconds));
-                }
+                let timeRange = playerItem.loadedTimeRanges[0].timeRangeValue
+                let duration = CMTimeGetSeconds(timeRange.duration)
+                self.channel.invokeMethod("audio.duration", arguments: Int(duration));
             });
             
             NotificationCenter.default.addObserver(self, selector:#selector(self.playerDidFinishPlaying(note:)),name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: player.currentItem);
