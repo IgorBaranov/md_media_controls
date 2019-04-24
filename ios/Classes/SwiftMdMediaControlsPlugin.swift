@@ -156,6 +156,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             } else {
                 player.play();
             }
+            self.channel.invokeMethod("audio.play", arguments: nil);
             return result(true);
         case "seek":
             let args = (call.arguments as! NSDictionary);
