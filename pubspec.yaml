@@ -1,6 +1,6 @@
 name: md_media_controls
 description: A new flutter plugin project.
-version: 0.0.22
+version: 0.0.23
 author: Igor Baranov<i.baranov@mobidev.biz>
 homepage: https://github.com/IgorBaranov/md_media_controls
 publish_to: https://pub.dartlang.org/

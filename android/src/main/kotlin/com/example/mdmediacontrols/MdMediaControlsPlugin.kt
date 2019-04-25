@@ -97,18 +97,19 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     return result.error("Playing error", "Invalid data source", null)
                 }
 
-                this.mediaPlayer.prepareAsync()
+                try {
+                    this.mediaPlayer.prepare();
+                    this.mediaPlayer.start();
+                    this.channel.invokeMethod("audio.play", null)
+                    val duration = this.mediaPlayer.duration
+                    this.channel.invokeMethod("audio.duration", duration / 1000)
+                } catch (error: Exception) {
+                    Log.w("player", "prepare error", error)
+                }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(rate.toFloat())
                     this.channel.invokeMethod("audio.rate", rate.toFloat())
-                }
-
-                this.mediaPlayer.setOnPreparedListener {
-                    it.start()
-                    this.channel.invokeMethod("audio.play", null)
-                    val duration = this.mediaPlayer.duration
-                    this.channel.invokeMethod("audio.duration", duration / 1000)
                 }
 
                 this.mediaPlayer.setOnCompletionListener {
