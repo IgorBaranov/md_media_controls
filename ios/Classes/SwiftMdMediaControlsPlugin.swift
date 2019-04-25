@@ -115,7 +115,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                 self.channel.invokeMethod("audio.duration", arguments: Int(duration));
             });
             
-            NotificationCenter.default.addObserver(self, selector:#selector(self.playerDidFinishPlaying(note:)),name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: player.currentItem);
+            NotificationCenter.default.addObserver(self, selector:#selector(self.playerDidFinishPlaying), name:NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: nil);
+            
             
             player.replaceCurrentItem(with: playerItem);
             let rate = args.object(forKey: "rate") as! Double;
