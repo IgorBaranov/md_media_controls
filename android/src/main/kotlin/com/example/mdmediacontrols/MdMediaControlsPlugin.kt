@@ -127,7 +127,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
             }
             "pause" -> {
                 if (this.mediaPlayer?.isPlaying && this.isOnPlay) {
-                    this.isOnPlay = false;
+                    this.isOnPlay = false
                     this.mediaPlayer.pause()
                     this.channel.invokeMethod("audio.pause", null)
                 }
@@ -135,7 +135,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
             }
             "playPrev" -> {
                 if (!this.isOnPlay) {
-                    this.inOnPlay = true;
+                    this.isOnPlay = true
                     this.mediaPlayer.start()
                     this.channel.invokeMethod("audio.play", null)
                 }
