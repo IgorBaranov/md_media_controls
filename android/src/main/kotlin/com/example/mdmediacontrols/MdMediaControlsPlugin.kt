@@ -130,6 +130,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     this.isOnPlay = false
                     this.mediaPlayer.pause()
                     this.channel.invokeMethod("audio.pause", null)
+                    handler.removeCallbacks(this.sendData)
                 }
                 return result.success(true)
             }
@@ -138,6 +139,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     this.isOnPlay = true
                     this.mediaPlayer.start()
                     this.channel.invokeMethod("audio.play", null)
+                    handler.post(this.sendData)
                 }
                 return result.success(true)
             }
