@@ -23,6 +23,7 @@ import android.support.v4.media.session.PlaybackStateCompat
 
 class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : MethodCallHandler {
     private var mediaPlayer = MediaPlayer()
+    private var uncontrolledMediaPLayer = MediaPlayer();
     private val registrar: Registrar = Registrar
     private val channel: MethodChannel = Channel
     private val am: AudioManager
@@ -196,6 +197,44 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
             }
             "clearInfo" -> {
                 // TODO implement it
+                return result.success(true)
+            }
+            "playUncontrolled" -> {
+                val args = call.arguments as HashMap<*, *>
+                val url = args.get("url") as String
+                val rate = args.get("rate") as Double
+                val isLocal = args.get("isLocal") as Boolean
+
+                this.uncontrolledMediaPLayer?.release()
+                this.uncontrolledMediaPLayer = MediaPlayer()
+
+                try {
+                    if (isLocal && (url.indexOf("assets") == 0 || url.indexOf("/assets") == 0)) {
+                        val assetManager = this.registrar.context().assets
+                        val key = this.registrar.lookupKeyForAsset(url)
+                        val fd = assetManager.openFd(key)
+                        if (fd.declaredLength < 0) {
+                            this.uncontrolledMediaPLayer.setDataSource(fd.fileDescriptor)
+                        } else {
+                            this.uncontrolledMediaPLayer.setDataSource(fd.fileDescriptor, fd.startOffset, fd.declaredLength)
+                        }
+                    } else {
+                        this.uncontrolledMediaPLayer.setDataSource(url)
+                    }
+                } catch (error: IOException) {
+                    return result.error("Playing error", "Invalid data source", null)
+                }
+
+                try {
+                    this.uncontrolledMediaPLayer.prepare();
+                    this.uncontrolledMediaPLayer.start();
+                } catch (error: Exception) {
+                    Log.w("player", "prepare error", error)
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    this.uncontrolledMediaPLayer.playbackParams = this.uncontrolledMediaPLayer.playbackParams.setSpeed(rate.toFloat())
+                }
                 return result.success(true)
             }
             else -> {

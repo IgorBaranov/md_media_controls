@@ -43,6 +43,8 @@ class MDMediaControlsTest extends StatelessWidget {
                         await mdMediaControls.setInfo(title: 'Some title', artist: 'some artist',
                             imageUrl: 'https://pngimage.net/wp-content/uploads/2018/05/example-icon-png-4.png'
                         );
+                        await Future.delayed(Duration(seconds: 2));
+                        await mdMediaControls.playUncontrolled(url: 'assets/audio2.mp3', rate: 1.0);
                       },
                       iconSize: 64.0,
                       icon: Icon(Icons.play_arrow),

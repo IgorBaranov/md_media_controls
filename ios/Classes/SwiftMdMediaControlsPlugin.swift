@@ -4,6 +4,9 @@ import MediaPlayer
 import AVFoundation
 import CoreFoundation
 
+
+let uncontrolledPlayer = AVPlayer();
+var uncontrolledPlayerItem: AVPlayerItem?;
 let player = AVPlayer();
 var playerItemObserver: AnyObject?;
 var playerItem: AVPlayerItem?;
@@ -202,6 +205,9 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             commandCenter.pauseCommand.isEnabled = args.object(forKey: "pause") as! Int == 1;
             commandCenter.previousTrackCommand.isEnabled = args.object(forKey: "prev") as! Int == 1;
             commandCenter.nextTrackCommand.isEnabled = args.object(forKey: "next") as! Int == 1;
+            if #available(iOS 9.1, *) {
+                commandCenter.changePlaybackPositionCommand.isEnabled = args.object(forKey: "position") as! Int == 1
+            }
             return result(true);
         case "info":
             let args = (call.arguments as! NSDictionary);
@@ -253,6 +259,33 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         case "clearInfo":
             mediaInfoData = [String: Any]();
             MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
+            return result(true);
+        case "playUncontrolled":
+            let args = (call.arguments as! NSDictionary);
+            let urlString = args.object(forKey: "url") as! String;
+            if let range = urlString.range(of: "assets") {
+                let position = urlString.distance(from: urlString.startIndex, to: range.lowerBound);
+                if (position == 1 || position == 0) {
+                    let asset = self.registrar.lookupKey(forAsset: urlString);
+                    let path = Bundle.main.path(forAuxiliaryExecutable: asset);
+                    uncontrolledPlayerItem = AVPlayerItem(url: URL(fileURLWithPath: path!));
+                } else {
+                    uncontrolledPlayerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!);
+                }
+            } else {
+                uncontrolledPlayerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!);
+            }
+            
+            
+            uncontrolledPlayer.replaceCurrentItem(with: uncontrolledPlayerItem);
+            let rate = args.object(forKey: "rate") as! Double;
+            uncontrolledPlayer.rate = Float(rate);
+            
+            if #available(iOS 10.0, *) {
+                uncontrolledPlayer.playImmediately(atRate: Float(rate))
+            } else {
+                uncontrolledPlayer.play();
+            };
             return result(true);
         default:
             result(FlutterMethodNotImplemented)

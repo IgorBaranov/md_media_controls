@@ -104,8 +104,15 @@ class MdMediaControls {
     }
   }
 
-  Future<void> playNew({@required String url, rate = 0.0}) async =>
+  Future<void> playNew({@required String url, double rate = 1.0}) async =>
       await _CHANNEL.invokeMethod('play', {
+        'url': url,
+        'isLocal': !_protocols.contains(url.split('://').first),
+        'rate': rate
+      });
+
+  Future<void> playUncontrolled({@required String url, rate = 1.0}) async =>
+      await _CHANNEL.invokeMethod('playUncontrolled', {
         'url': url,
         'isLocal': !_protocols.contains(url.split('://').first),
         'rate': rate
@@ -145,12 +152,14 @@ class MdMediaControls {
     bool pause = true,
     bool play = true,
     bool prev = true,
-    bool next = true
+    bool next = true,
+    bool position = true
   }) async => await _CHANNEL.invokeMethod('infoControls', {
     'pause': pause,
     'play': play,
     'prev': prev,
-    'next': next
+    'next': next,
+    'position': position
   });
 
   Future<void> clearInfo() async => await _CHANNEL.invokeMethod('clearInfo');
