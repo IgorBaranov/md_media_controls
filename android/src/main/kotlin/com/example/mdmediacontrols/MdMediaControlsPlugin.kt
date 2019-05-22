@@ -32,12 +32,12 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     private val context: Context
     private val metadataBuilder = MediaMetadataCompat.Builder()
     private val stateBuilder: PlaybackStateCompat.Builder = PlaybackStateCompat.Builder().setActions(
-        PlaybackStateCompat.ACTION_PLAY
-        or PlaybackStateCompat.ACTION_STOP
-        or PlaybackStateCompat.ACTION_PAUSE
-        or PlaybackStateCompat.ACTION_PLAY_PAUSE
-        or PlaybackStateCompat.ACTION_SKIP_TO_NEXT
-        or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
+            PlaybackStateCompat.ACTION_PLAY
+                    or PlaybackStateCompat.ACTION_STOP
+                    or PlaybackStateCompat.ACTION_PAUSE
+                    or PlaybackStateCompat.ACTION_PLAY_PAUSE
+                    or PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+                    or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
     private var metadata: MediaMetadataCompat? = null
 
     private val mediaSession: MediaSessionCompat
@@ -124,7 +124,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     true
                 }
                 this.isOnPlay = true
-                handler.post(this.sendData)
+                this.handler.post(this.sendData)
                 return result.success(true)
             }
             "pause" -> {
@@ -132,7 +132,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     this.isOnPlay = false
                     this.mediaPlayer.pause()
                     this.channel.invokeMethod("audio.pause", null)
-                    handler.removeCallbacks(this.sendData)
+                    this.handler.removeCallbacks(this.sendData)
                 }
                 return result.success(true)
             }
@@ -141,7 +141,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     this.isOnPlay = true
                     this.mediaPlayer.start()
                     this.channel.invokeMethod("audio.play", null)
-                    handler.post(this.sendData)
+                    this.handler.post(this.sendData)
                 }
                 return result.success(true)
             }
@@ -149,6 +149,11 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val args = call.arguments as HashMap<*, *>
                 val position = args.get("position") as Double
                 this.mediaPlayer.seekTo(position.toInt() * 1000)
+                if (!this.isOnPlay) {
+                    this.isOnPlay = false
+                    this.handler.removeCallbacks(this.sendData)
+                    this.handler.post(this.sendData);
+                }
                 return result.success(true)
             }
             "stop" -> {
