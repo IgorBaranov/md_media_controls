@@ -137,7 +137,7 @@ class MdMediaControls {
     @required String imageUrl,
   }) async {
     var isLocal = true;
-    if (_protocols.contains(imageUrl.split('://').first)) {
+    if (imageUrl != null && _protocols.contains(imageUrl.split('://').first)) {
       isLocal = false;
     }
     return await _CHANNEL.invokeMethod('info', {
