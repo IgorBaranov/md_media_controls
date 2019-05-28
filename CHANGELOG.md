@@ -1,3 +1,3 @@
-## 0.0.9
+## 0.0.29 
 
-First release, cheers!
+refactoring, sry guys I'll add docs soon)
