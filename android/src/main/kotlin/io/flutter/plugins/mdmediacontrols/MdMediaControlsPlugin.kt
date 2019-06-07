@@ -23,6 +23,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     private val channel: MethodChannel = Channel
     private val am: AudioManager
     private var isOnPlay = false
+    private var isSekInProgress = false
     private val handler = Handler()
     private val context: Context
 
@@ -97,6 +98,10 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     channel.invokeMethod("error", "start play error")
                     true
                 }
+
+                this.mediaPlayer.setOnSeekCompleteListener {
+                    isSekInProgress = false
+                }
                 this.isOnPlay = true
                 this.handler.post(this.sendData)
                 return result.success(true)
@@ -123,6 +128,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val args = call.arguments as HashMap<*, *>
                 val position = args.get("position") as Double
                 val positionInMsec = position * 1000
+                isSekInProgress = true
                 this.mediaPlayer.seekTo(positionInMsec.toInt())
                 if (!this.isOnPlay) {
                     this.isOnPlay = false
@@ -208,8 +214,10 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 if (!mediaPlayer.isPlaying) {
                     handler.removeCallbacks(this)
                 }
-                val time = mediaPlayer.currentPosition
-                channel.invokeMethod("audio.position", time)
+                if (!isSekInProgress) {
+                    val time = mediaPlayer.currentPosition
+                    channel.invokeMethod("audio.position", time)
+                }
                 handler.postDelayed(this, 100)
             } catch (error: Exception) {
                 Log.w("player", "Handler error", error)
