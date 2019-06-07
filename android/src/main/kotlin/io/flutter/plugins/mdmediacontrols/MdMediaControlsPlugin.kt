@@ -213,6 +213,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
             try {
                 if (!mediaPlayer.isPlaying) {
                     handler.removeCallbacks(this)
+                    return
                 }
                 if (!isSekInProgress) {
                     val time = mediaPlayer.currentPosition
