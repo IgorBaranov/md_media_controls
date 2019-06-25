@@ -127,6 +127,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                     playerItem.seek(to: CMTimeMakeWithSeconds(startPosition, 60000), completionHandler: {
                         (_: Bool) -> Void in
                         seekInProgress = false;
+                        let currentTime = CMTimeGetSeconds(playerItem.currentTime());
+                        self.channel.invokeMethod("audio.position", arguments: Int(currentTime * 1000));
                     });
                 }
                 self.channel.invokeMethod("audio.duration", arguments: Int(duration));
@@ -152,7 +154,6 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
 
             MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
             self.channel.invokeMethod("audio.rate", arguments: 1.0)
-            self.channel.invokeMethod("audio.duration", arguments: playerItem?.duration.seconds)
 
             do {
                 try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback, with: []);
@@ -185,6 +186,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                 tt.seek(to: CMTimeMakeWithSeconds(position, 60000), completionHandler: {
                     (_: Bool) -> Void in
                         seekInProgress = false;
+                        let currentTime = CMTimeGetSeconds(tt.currentTime());
+                        self.channel.invokeMethod("audio.position", arguments: Int(currentTime * 1000));
                 });
             }
             if (player.rate == 0.0) {
