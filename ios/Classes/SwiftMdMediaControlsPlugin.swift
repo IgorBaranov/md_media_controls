@@ -119,6 +119,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             }
 
             playerItemObserver = playerItem?.observe(\.status, options: [.new, .old], changeHandler: { (playerItem, change) in
+                if (playerItem.loadedTimeRanges.count == 0) {return;}
                 let timeRange = playerItem.loadedTimeRanges[0].timeRangeValue
                 let duration = CMTimeGetSeconds(timeRange.duration)
                 if (startPosition != 0.0) {
