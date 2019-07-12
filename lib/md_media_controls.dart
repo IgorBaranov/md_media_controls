@@ -108,8 +108,8 @@ class MdMediaControls {
       await _CHANNEL.invokeMethod('play', {
         'url': url,
         'isLocal': !_protocols.contains(url.split('://').first),
-        'rate': rate,
-        'startPosition': startPosition
+        'rate': rate ?? 1.0,
+        'startPosition': startPosition ?? 0.0
       });
 
   Future<void> playUncontrolled({@required String url, rate = 1.0}) async =>
