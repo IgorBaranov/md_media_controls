@@ -92,6 +92,12 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         case "play":
             seekInProgress = false;
             self.channel.invokeMethod("audio.prepare", arguments: nil)
+            
+            NotificationCenter.default.removeObserver(self)
+            
+            if let tt = playerItemObserver {
+                tt.invalidate();
+            }
 
             let args = (call.arguments as! NSDictionary);
             let urlString = args.object(forKey: "url") as! String;
@@ -107,15 +113,6 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                 }
             } else {
                 playerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!);
-            }
-
-
-
-
-            NotificationCenter.default.removeObserver(self)
-
-            if let tt = playerItemObserver {
-                tt.invalidate();
             }
 
             playerItemObserver = playerItem?.observe(\.status, options: [.new, .old], changeHandler: { (playerItem, change) in
