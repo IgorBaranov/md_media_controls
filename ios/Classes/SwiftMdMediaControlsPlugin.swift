@@ -114,6 +114,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             } else {
                 playerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!);
             }
+            playerItem?.audioTimePitchAlgorithm = AVAudioTimePitchAlgorithm.varispeed;
 
             playerItemObserver = playerItem?.observe(\.status, options: [.new, .old], changeHandler: { (playerItem, change) in
                 if (playerItem.loadedTimeRanges.count == 0) {return;}
