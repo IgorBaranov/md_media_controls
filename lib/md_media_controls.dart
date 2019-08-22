@@ -125,8 +125,8 @@ class MdMediaControls {
 
   Future<void> stop() async => await _CHANNEL.invokeMethod('stop');
 
-  Future<void> seek(double seconds) async =>
-      await _CHANNEL.invokeMethod('seek', {'position': seconds});
+  Future<void> seek(double seconds, {bool play = true}) async =>
+      await _CHANNEL.invokeMethod('seek', {'position': seconds, 'play': play});
 
   Future<void> rate({double rate = 0.0}) async =>
       await _CHANNEL.invokeMethod('rate', {'rate': rate});

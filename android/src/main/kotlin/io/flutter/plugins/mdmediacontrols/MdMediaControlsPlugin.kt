@@ -133,6 +133,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
             "seek" -> {
                 val args = call.arguments as HashMap<*, *>
                 val position = args.get("position") as Double
+                val play = args.get("play") as Boolean
                 val positionInMsec = position * 1000
                 isSekInProgress = true
                 this.mediaPlayer.seekTo(positionInMsec.toInt())
@@ -140,6 +141,9 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     this.isOnPlay = false
                     this.handler.removeCallbacks(this.sendData)
                     this.handler.post(this.sendData);
+                }
+                if (play) {
+                    this.mediaPlayer.start()
                 }
                 return result.success(true)
             }

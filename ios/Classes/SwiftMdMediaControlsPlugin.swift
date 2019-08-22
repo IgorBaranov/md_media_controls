@@ -186,6 +186,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             self.stopAppTimeObserver();
             let args = (call.arguments as! NSDictionary);
             let position = args.object(forKey: "position") as! Double;
+            let play = args.object(forKey: "play") as! Bool;
 
             if let tt = playerItem {
                 tt.seek(to: CMTimeMakeWithSeconds(position, 60000), completionHandler: {
@@ -196,7 +197,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                         self.channel.invokeMethod("audio.position", arguments: Int(currentTime * 1000));
                 });
             }
-            if (player.rate == 0.0) {
+            if (player.rate == 0.0 && play) {
                 if #available(iOS 10.0, *) {
                     player.playImmediately(atRate: Float(self.currentRate))
                 } else {
