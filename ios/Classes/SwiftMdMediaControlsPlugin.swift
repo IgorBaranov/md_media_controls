@@ -333,6 +333,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
     @objc func stopAppTimeObserver() {
         if let tt = playerTimeObserver {
             player.removeTimeObserver(tt);
+            playerTimeObserver = nil;
         }
     }
 }
