@@ -58,6 +58,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                         let currentTime = CMTimeGetSeconds(tt.currentTime());
                         mediaInfoData[MPNowPlayingInfoPropertyElapsedPlaybackTime]  = currentTime;
                         MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
+                        print("periodec time");
+                        print(currentTime);
                         mediaControlsChannel.invokeMethod("audio.position", arguments: Int(currentTime * 1000));
                     }
                 }
@@ -123,7 +125,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                 if (startPosition != 0.0) {
                     seekInProgress = true;
                     
-                    playerItem.seek(to: CMTimeMakeWithSeconds(startPosition, 60000), completionHandler: {
+                    playerItem.seek(to: CMTimeMakeWithSeconds(startPosition, 60000), toleranceBefore: kCMTimeZero, toleranceAfter: kCMTimeZero, completionHandler: {
                         (_: Bool) -> Void in
                         seekInProgress = false;
                         let currentTime = CMTimeGetSeconds(playerItem.currentTime());
@@ -182,10 +184,12 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             let position = args.object(forKey: "position") as! Double;
 
             if let tt = playerItem {
-                tt.seek(to: CMTimeMakeWithSeconds(position, 60000), completionHandler: {
+                tt.seek(to: CMTimeMakeWithSeconds(position, 60000), toleranceBefore: kCMTimeZero, toleranceAfter: kCMTimeZero, completionHandler: {
                     (_: Bool) -> Void in
                         seekInProgress = false;
                         let currentTime = CMTimeGetSeconds(tt.currentTime());
+                        print("time after seek");
+                        print(tt.currentTime());
                         self.channel.invokeMethod("audio.position", arguments: Int(currentTime * 1000));
                 });
             }
