@@ -182,6 +182,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             self.channel.invokeMethod("audio.play", arguments: nil);
             return result(true);
         case "seek":
+            if (seekInProgress) {return result(false);}
+            
             seekInProgress = true;
             self.stopAppTimeObserver();
             let args = (call.arguments as! NSDictionary);
