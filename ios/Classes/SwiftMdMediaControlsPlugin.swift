@@ -105,6 +105,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             let args = (call.arguments as! NSDictionary);
             let urlString = args.object(forKey: "url") as! String;
             let startPosition = args.object(forKey: "startPosition") as! Double;
+            let autoPlay = args.object(forKey: "autoPlay") as! Bool;
             if let range = urlString.range(of: "assets") {
                 let position = urlString.distance(from: urlString.startIndex, to: range.lowerBound);
                 if (position == 1 || position == 0) {
@@ -150,11 +151,13 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             mediaInfoData[MPMediaItemPropertyPlaybackDuration] = playerItem?.asset.duration.seconds;
             mediaInfoData[MPNowPlayingInfoPropertyPlaybackRate] = player.rate;
 
-            if #available(iOS 10.0, *) {
-                player.playImmediately(atRate: Float(rate))
-            } else {
-                player.play();
-            };
+            if (autoPlay) {
+                if #available(iOS 10.0, *) {
+                    player.playImmediately(atRate: Float(rate))
+                } else {
+                    player.play();
+                };
+            }
 
             MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
             self.channel.invokeMethod("audio.rate", arguments: 1.0)

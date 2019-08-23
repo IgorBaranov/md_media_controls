@@ -51,6 +51,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val rate = args.get("rate") as Double
                 val isLocal = args.get("isLocal") as Boolean
                 val startPosition = args.get("startPosition") as Double
+                val autoPlay = args.get("autoPlay") as Boolean
 
                 this.mediaPlayer?.release()
                 this.mediaPlayer = MediaPlayer()
@@ -76,7 +77,9 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
 
                 try {
                     this.mediaPlayer.prepare()
-                    this.mediaPlayer.start()
+                    if (autoPlay) {
+                        this.mediaPlayer.start()
+                    }
                     if (startPosition != 0.0) {
                         isSekInProgress = true
                         val positionInMsec = startPosition * 1000
@@ -106,6 +109,8 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 }
 
                 this.mediaPlayer.setOnSeekCompleteListener {
+                    val time = mediaPlayer.currentPosition
+                    channel.invokeMethod("audio.position", time)
                     isSekInProgress = false
                 }
                 this.isOnPlay = true
