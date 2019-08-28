@@ -144,7 +144,9 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
 
             player.replaceCurrentItem(with: playerItem);
             let rate = args.object(forKey: "rate") as! Double;
-            player.rate = Float(rate);
+            if (autoPlay) {
+                player.rate = Float(rate);
+            }
             self.currentRate = rate;
             UIApplication.shared.beginReceivingRemoteControlEvents();
             mediaInfoData[MPNowPlayingInfoPropertyElapsedPlaybackTime] = playerItem?.currentTime().seconds;
