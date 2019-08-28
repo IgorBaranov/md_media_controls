@@ -167,7 +167,11 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             do {
                 try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback, with: []);
                 try AVAudioSession.sharedInstance().setActive(true);
-                self.channel.invokeMethod("audio.play", arguments: nil);
+                if (autoPlay) {
+                    self.channel.invokeMethod("audio.play", arguments: nil);
+                } else {
+                    self.channel.invokeMethod("audio.pause", arguments: nil);
+                }
             } catch let error {
                 print(error);
                 self.channel.invokeMethod("error", arguments: error.localizedDescription);

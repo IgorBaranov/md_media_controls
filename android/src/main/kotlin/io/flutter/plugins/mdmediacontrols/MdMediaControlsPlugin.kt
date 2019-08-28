@@ -78,14 +78,18 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 try {
                     this.mediaPlayer.prepare()
                     if (autoPlay) {
-                        this.mediaPlayer.start()
+//                        this.mediaPlayer.start()
                     }
                     if (startPosition != 0.0) {
                         isSekInProgress = true
                         val positionInMsec = startPosition * 1000
                         this.mediaPlayer.seekTo(positionInMsec.toInt())
                     }
-                    this.channel.invokeMethod("audio.play", null)
+                    if (autoPlay) {
+                        this.channel.invokeMethod("audio.play", null)
+                    } else {
+                        this.channel.invokeMethod("audio.pause", null)
+                    }
                     val duration = this.mediaPlayer.duration
                     this.channel.invokeMethod("audio.duration", duration / 1000)
                 } catch (error: Exception) {
@@ -93,7 +97,9 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(rate.toFloat())
+                    if (autoPlay) {
+                        this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(rate.toFloat())
+                    }
                     this.channel.invokeMethod("audio.rate", rate.toFloat())
                 }
 
@@ -113,7 +119,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     channel.invokeMethod("audio.position", time)
                     isSekInProgress = false
                 }
-                this.isOnPlay = true
+                this.isOnPlay = autoPlay
                 this.handler.post(this.sendData)
                 return result.success(true)
             }
