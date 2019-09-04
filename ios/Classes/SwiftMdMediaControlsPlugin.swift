@@ -214,8 +214,10 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                 self.channel.invokeMethod("audio.play", arguments: nil);
             } else {
                 self.currentRate = 1.0;
+                player.pause();
                 self.channel.invokeMethod("audio.pause", arguments: nil);
             }
+            self.channel.invokeMethod("audio.rate", arguments: Float(self.currentRate));
             return result(true);
         case "stop":
             player.pause();
