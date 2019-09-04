@@ -154,7 +154,14 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     this.handler.post(this.sendData);
                 }
                 if (play) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(1.0f)
+                    }
+                    this.channel.invokeMethod("audio.rate", 1.0)
                     this.mediaPlayer.start()
+                    this.channel.invokeMethod("audio.play", null)
+                } else {
+                    this.channel.invokeMethod("audio.pause", null)
                 }
                 return result.success(true)
             }

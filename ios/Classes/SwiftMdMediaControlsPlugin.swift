@@ -209,11 +209,11 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                 });
             }
             if (player.rate == 0.0 && play) {
-                if #available(iOS 10.0, *) {
-                    player.playImmediately(atRate: Float(self.currentRate))
-                } else {
-                    player.play();
-                };
+                player.rate = 1.0;
+                self.currentRate = 1.0;
+                self.channel.invokeMethod("audio.play", arguments: nil);
+            } else {
+                self.channel.invokeMethod("audio.pause", arguments: nil);
             }
             return result(true);
         case "stop":
