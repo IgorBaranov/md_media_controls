@@ -200,7 +200,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             let play = args.object(forKey: "play") as! Bool;
 
             if let tt = playerItem {
-                tt.seek(to: CMTimeMakeWithSeconds(position, 60000), completionHandler: {
+                tt.seek(to: CMTimeMakeWithSeconds(position, 60000),toleranceBefore: kCMTimeZero, toleranceAfter: kCMTimeZero, completionHandler: {
                     (_: Bool) -> Void in
                         seekInProgress = false;
                         self.startAppTimeObserver(channel: self.channel);

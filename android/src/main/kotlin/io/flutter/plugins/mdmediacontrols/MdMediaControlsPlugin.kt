@@ -157,9 +157,11 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(1.0f)
                     }
+                    this.isOnPlay = true
                     this.mediaPlayer.start()
                     this.channel.invokeMethod("audio.play", null)
                 } else {
+                    this.isOnPlay = false
                     this.mediaPlayer.pause()
                     this.channel.invokeMethod("audio.pause", null)
                 }
