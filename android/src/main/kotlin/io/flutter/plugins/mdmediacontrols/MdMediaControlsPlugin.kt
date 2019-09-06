@@ -78,7 +78,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 try {
                     this.mediaPlayer.prepare()
                     if (autoPlay) {
-//                        this.mediaPlayer.start()
+                        this.mediaPlayer.start()
                     }
                     if (startPosition != 0.0) {
                         isSekInProgress = true
