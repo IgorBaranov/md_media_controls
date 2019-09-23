@@ -14,11 +14,12 @@ import android.util.Log
 import java.io.IOException
 import android.os.Handler
 import java.lang.Exception
+import java.lang.IllegalStateException
 
 
 class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : MethodCallHandler {
     private var mediaPlayer = MediaPlayer()
-    private var uncontrolledMediaPLayer: MediaPlayer? = MediaPlayer()
+    private var uncontrolledMediaPLayer = MediaPlayer()
     private val registrar: Registrar = Registrar
     private val channel: MethodChannel = Channel
     private val am: AudioManager
@@ -201,12 +202,11 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val rate = args.get("rate") as Double
                 val isLocal = args.get("isLocal") as Boolean
 
-                if (this.uncontrolledMediaPLayer != null && this.uncontrolledMediaPLayer!!.isPlaying) {
-                    this.uncontrolledMediaPLayer?.stop()
-                }
-
-                this.uncontrolledMediaPLayer?.release()
-                this.uncontrolledMediaPLayer = MediaPlayer()
+                try {
+                    this.uncontrolledMediaPLayer.stop()
+                } catch (error: IllegalStateException) {}
+                
+                this.uncontrolledMediaPLayer.reset()
 
                 try {
                     if (isLocal && (url.indexOf("assets") == 0 || url.indexOf("/assets") == 0)) {
@@ -214,29 +214,26 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                         val key = this.registrar.lookupKeyForAsset(url)
                         val fd = assetManager.openFd(key)
                         if (fd.declaredLength < 0) {
-                            this.uncontrolledMediaPLayer!!.setDataSource(fd.fileDescriptor)
+                            this.uncontrolledMediaPLayer.setDataSource(fd.fileDescriptor)
                         } else {
-                            this.uncontrolledMediaPLayer!!.setDataSource(fd.fileDescriptor, fd.startOffset, fd.declaredLength)
+                            this.uncontrolledMediaPLayer.setDataSource(fd.fileDescriptor, fd.startOffset, fd.declaredLength)
                         }
                     } else {
-                        this.uncontrolledMediaPLayer!!.setDataSource(url)
+                        this.uncontrolledMediaPLayer.setDataSource(url)
                     }
                 } catch (error: IOException) {
                     return result.error("Playing error", "Invalid data source", null)
                 }
 
                 try {
-                    this.uncontrolledMediaPLayer?.prepare()
-                    this.uncontrolledMediaPLayer?.start()
-                    this.uncontrolledMediaPLayer?.setOnCompletionListener {
-                        it.release()
-                    }
+                    this.uncontrolledMediaPLayer.prepare()
+                    this.uncontrolledMediaPLayer.start()
                 } catch (error: Exception) {
                     Log.w("player", "prepare error", error)
                 }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    this.uncontrolledMediaPLayer?.playbackParams = this.uncontrolledMediaPLayer?.playbackParams!!.setSpeed(rate.toFloat())
+                    this.uncontrolledMediaPLayer.playbackParams = this.uncontrolledMediaPLayer.playbackParams.setSpeed(rate.toFloat())
                 }
                 return result.success(true)
             }
