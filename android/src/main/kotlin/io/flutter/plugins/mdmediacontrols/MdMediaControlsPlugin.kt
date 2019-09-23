@@ -222,8 +222,11 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 }
 
                 try {
-                    this.uncontrolledMediaPLayer.prepare();
-                    this.uncontrolledMediaPLayer.start();
+                    this.uncontrolledMediaPLayer.prepare()
+                    this.uncontrolledMediaPLayer.start()
+                    this.uncontrolledMediaPLayer.setOnCompletionListener {
+                        it.release()
+                    }
                 } catch (error: Exception) {
                     Log.w("player", "prepare error", error)
                 }
