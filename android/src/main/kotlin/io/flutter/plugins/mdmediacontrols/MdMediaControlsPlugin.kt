@@ -53,7 +53,6 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val startPosition = args.get("startPosition") as Double
                 val autoPlay = args.get("autoPlay") as Boolean
 
-                this.mediaPlayer?.stop()
                 this.mediaPlayer?.release()
                 this.mediaPlayer = MediaPlayer()
 
@@ -202,7 +201,10 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val rate = args.get("rate") as Double
                 val isLocal = args.get("isLocal") as Boolean
 
-                this.uncontrolledMediaPLayer?.stop()
+                if (this.uncontrolledMediaPLayer != null && this.uncontrolledMediaPLayer!!.isPlaying) {
+                    this.uncontrolledMediaPLayer?.stop()
+                }
+
                 this.uncontrolledMediaPLayer?.release()
                 this.uncontrolledMediaPLayer = MediaPlayer()
 
