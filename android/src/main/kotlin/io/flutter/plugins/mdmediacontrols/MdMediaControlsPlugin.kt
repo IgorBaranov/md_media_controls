@@ -13,13 +13,12 @@ import android.os.Build
 import android.util.Log
 import java.io.IOException
 import android.os.Handler
-import androidx.annotation.Nullable
 import java.lang.Exception
 
 
 class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : MethodCallHandler {
-    @Nullable private var mediaPlayer: MediaPlayer? = null
-    @Nullable private var uncontrolledMediaPLayer: MediaPlayer? = null
+    private var mediaPlayer = MediaPlayer()
+    private var uncontrolledMediaPLayer: MediaPlayer? = MediaPlayer()
     private val registrar: Registrar = Registrar
     private val channel: MethodChannel = Channel
     private val am: AudioManager
@@ -64,12 +63,12 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                         val key = this.registrar.lookupKeyForAsset(url)
                         val fd = assetManager.openFd(key)
                         if (fd.declaredLength < 0) {
-                            this.mediaPlayer?.setDataSource(fd.fileDescriptor)
+                            this.mediaPlayer.setDataSource(fd.fileDescriptor)
                         } else {
-                            this.mediaPlayer?.setDataSource(fd.fileDescriptor, fd.startOffset, fd.declaredLength)
+                            this.mediaPlayer.setDataSource(fd.fileDescriptor, fd.startOffset, fd.declaredLength)
                         }
                     } else {
-                        this.mediaPlayer?.setDataSource(url)
+                        this.mediaPlayer.setDataSource(url)
                     }
                 } catch (error: IOException) {
                     Log.w("Play", "Invalid data source", error)
@@ -78,21 +77,21 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 }
 
                 try {
-                    this.mediaPlayer?.prepare()
+                    this.mediaPlayer.prepare()
                     if (autoPlay) {
-                        this.mediaPlayer?.start()
+                        this.mediaPlayer.start()
                     }
                     if (startPosition != 0.0) {
                         isSekInProgress = true
                         val positionInMsec = startPosition * 1000
-                        this.mediaPlayer?.seekTo(positionInMsec.toInt())
+                        this.mediaPlayer.seekTo(positionInMsec.toInt())
                     }
                     if (autoPlay) {
                         this.channel.invokeMethod("audio.play", null)
                     } else {
                         this.channel.invokeMethod("audio.pause", null)
                     }
-                    val duration = this.mediaPlayer!!.duration
+                    val duration = this.mediaPlayer.duration
                     this.channel.invokeMethod("audio.duration", duration / 1000)
                 } catch (error: Exception) {
                     Log.w("player", "prepare error", error)
@@ -100,24 +99,24 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     if (autoPlay) {
-                        this.mediaPlayer?.playbackParams = this.mediaPlayer?.playbackParams!!.setSpeed(rate.toFloat())
+                        this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(rate.toFloat())
                     }
                     this.channel.invokeMethod("audio.rate", rate.toFloat())
                 }
 
-                this.mediaPlayer?.setOnCompletionListener {
+                this.mediaPlayer.setOnCompletionListener {
                     this.channel.invokeMethod("audio.completed", null)
                     this.isOnPlay = false
                     handler.removeCallbacks(this.sendData)
                 }
 
-                this.mediaPlayer?.setOnErrorListener { _, _, _ ->
+                this.mediaPlayer.setOnErrorListener { _, _, _ ->
                     channel.invokeMethod("error", "start play error")
                     true
                 }
 
-                this.mediaPlayer?.setOnSeekCompleteListener {
-                    val time = it.currentPosition
+                this.mediaPlayer.setOnSeekCompleteListener {
+                    val time = mediaPlayer.currentPosition
                     channel.invokeMethod("audio.position", time)
                     isSekInProgress = false
                 }
@@ -126,9 +125,9 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 return result.success(true)
             }
             "pause" -> {
-                if (this.isOnPlay) {
+                if (this.mediaPlayer?.isPlaying && this.isOnPlay) {
                     this.isOnPlay = false
-                    this.mediaPlayer?.pause()
+                    this.mediaPlayer.pause()
                     this.channel.invokeMethod("audio.pause", null)
                     this.handler.removeCallbacks(this.sendData)
                 }
@@ -137,7 +136,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
             "playPrev" -> {
                 if (!this.isOnPlay) {
                     this.isOnPlay = true
-                    this.mediaPlayer?.start()
+                    this.mediaPlayer.start()
                     this.channel.invokeMethod("audio.play", null)
                     this.handler.post(this.sendData)
                 }
@@ -149,7 +148,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val play = args.get("play") as Boolean
                 val positionInMsec = position * 1000
                 isSekInProgress = true
-                this.mediaPlayer?.seekTo(positionInMsec.toInt())
+                this.mediaPlayer.seekTo(positionInMsec.toInt())
                 if (!this.isOnPlay) {
                     this.isOnPlay = false
                     this.handler.removeCallbacks(this.sendData)
@@ -157,14 +156,14 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 }
                 if (play) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        this.mediaPlayer?.playbackParams = this.mediaPlayer?.playbackParams!!.setSpeed(1.0f)
+                        this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(1.0f)
                     }
                     this.isOnPlay = true
-                    this.mediaPlayer?.start()
+                    this.mediaPlayer.start()
                     this.channel.invokeMethod("audio.play", null)
                 } else {
                     this.isOnPlay = false
-                    this.mediaPlayer?.pause()
+                    this.mediaPlayer.pause()
                     this.channel.invokeMethod("audio.pause", null)
                 }
                 this.channel.invokeMethod("audio.rate", 1.0)
@@ -172,9 +171,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
             }
             "stop" -> {
                 this.handler.removeCallbacks(this.sendData)
-                this.mediaPlayer?.stop()
-                this.mediaPlayer?.release()
-                this.mediaPlayer = null
+                this.mediaPlayer.release()
                 this.channel.invokeMethod("audio.stop", null)
                 this.isOnPlay = false
                 return result.success(true)
@@ -183,7 +180,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val args = call.arguments as HashMap<*, *>
                 val rate = args.get("rate") as Double
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    this.mediaPlayer?.playbackParams = this.mediaPlayer?.playbackParams!!.setSpeed(rate.toFloat())
+                    this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(rate.toFloat())
                     this.channel.invokeMethod("audio.rate", rate.toFloat())
                 }
                 return result.success(true)
@@ -215,12 +212,12 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                         val key = this.registrar.lookupKeyForAsset(url)
                         val fd = assetManager.openFd(key)
                         if (fd.declaredLength < 0) {
-                            this.uncontrolledMediaPLayer?.setDataSource(fd.fileDescriptor)
+                            this.uncontrolledMediaPLayer!!.setDataSource(fd.fileDescriptor)
                         } else {
-                            this.uncontrolledMediaPLayer?.setDataSource(fd.fileDescriptor, fd.startOffset, fd.declaredLength)
+                            this.uncontrolledMediaPLayer!!.setDataSource(fd.fileDescriptor, fd.startOffset, fd.declaredLength)
                         }
                     } else {
-                        this.uncontrolledMediaPLayer?.setDataSource(url)
+                        this.uncontrolledMediaPLayer!!.setDataSource(url)
                     }
                 } catch (error: IOException) {
                     return result.error("Playing error", "Invalid data source", null)
@@ -250,12 +247,12 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     private val sendData = object : Runnable {
         override fun run() {
             try {
-                if (isOnPlay) {
+                if (!mediaPlayer.isPlaying) {
                     handler.removeCallbacks(this)
                     return
                 }
                 if (!isSekInProgress) {
-                    val time = mediaPlayer?.currentPosition
+                    val time = mediaPlayer.currentPosition
                     channel.invokeMethod("audio.position", time)
                 }
                 handler.postDelayed(this, 100)
