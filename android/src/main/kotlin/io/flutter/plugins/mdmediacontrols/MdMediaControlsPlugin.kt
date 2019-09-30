@@ -18,7 +18,7 @@ import java.lang.IllegalStateException
 
 
 class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : MethodCallHandler {
-    private var mediaPlayer = MediaPlayer()
+    private val mediaPlayer = MediaPlayer()
     private var uncontrolledMediaPLayer = MediaPlayer()
     private val registrar: Registrar = Registrar
     private val channel: MethodChannel = Channel
@@ -54,8 +54,11 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val startPosition = args.get("startPosition") as Double
                 val autoPlay = args.get("autoPlay") as Boolean
 
-                this.mediaPlayer?.release()
-                this.mediaPlayer = MediaPlayer()
+                try {
+                    this.mediaPlayer.stop()
+                } catch (error: IllegalStateException) {}
+
+                this.mediaPlayer.reset()
 
                 try {
                     if (isLocal && (url.indexOf("assets") == 0 || url.indexOf("/assets") == 0)) {
@@ -171,7 +174,6 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
             }
             "stop" -> {
                 this.handler.removeCallbacks(this.sendData)
-                this.mediaPlayer.release()
                 this.channel.invokeMethod("audio.stop", null)
                 this.isOnPlay = false
                 return result.success(true)
