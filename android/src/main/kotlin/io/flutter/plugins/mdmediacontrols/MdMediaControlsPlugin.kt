@@ -25,7 +25,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     private val channel: MethodChannel = Channel
     private val am: AudioManager
     private var isOnPlay = false
-    private var isSekInProgress = false
+    private var isSeekInProgress = false
     private val handler = Handler()
     private val context: Context
 
@@ -93,7 +93,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                         this.mediaPlayer.start()
                     }
                     if (startPosition != 0.0) {
-                        isSekInProgress = true
+                        this.isSeekInProgress = true
                         val positionInMsec = startPosition * 1000
                         this.mediaPlayer.seekTo(positionInMsec.toInt())
                     }
@@ -121,15 +121,10 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     handler.removeCallbacks(this.sendData)
                 }
 
-                this.mediaPlayer.setOnErrorListener { _, _, _ ->
-                    channel.invokeMethod("error", "start play error")
-                    true
-                }
-
                 this.mediaPlayer.setOnSeekCompleteListener {
                     val time = mediaPlayer.currentPosition
                     channel.invokeMethod("audio.position", time)
-                    isSekInProgress = false
+                    this.isSeekInProgress = false
                 }
                 this.isOnPlay = autoPlay
                 this.handler.post(this.sendData)
@@ -158,23 +153,28 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val position = args.get("position") as Double
                 val play = args.get("play") as Boolean
                 val positionInMsec = position * 1000
-                isSekInProgress = true
+                this.isSeekInProgress = true
                 this.mediaPlayer.seekTo(positionInMsec.toInt())
-                if (!this.isOnPlay) {
-                    this.isOnPlay = false
-                    this.handler.removeCallbacks(this.sendData)
-                    this.handler.post(this.sendData)
-                }
+                print(this.mediaPlayer.isPlaying)
+                print(this.isSeekInProgress)
                 if (play) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(1.0f)
                     }
-                    this.isOnPlay = true
-                    this.mediaPlayer.start()
+                    if (!this.isOnPlay) {
+                        this.isOnPlay = true
+                        this.mediaPlayer.start()
+                        this.handler.removeCallbacks(this.sendData)
+                        this.handler.post(this.sendData)
+                    }
+
                     this.channel.invokeMethod("audio.play", null)
                 } else {
-                    this.isOnPlay = false
-                    this.mediaPlayer.pause()
+                    if (this.isOnPlay) {
+                        this.isOnPlay = false
+                        this.mediaPlayer.pause()
+                    }
+
                     this.channel.invokeMethod("audio.pause", null)
                 }
                 this.channel.invokeMethod("audio.rate", 1.0)
@@ -215,7 +215,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 try {
                     this.uncontrolledMediaPLayer.stop()
                 } catch (error: IllegalStateException) {}
-                
+
                 this.uncontrolledMediaPLayer.reset()
 
                 try {
@@ -260,7 +260,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     handler.removeCallbacks(this)
                     return
                 }
-                if (!isSekInProgress) {
+                if (!this@MdMediaControlsPlugin.isSeekInProgress) {
                     val time = mediaPlayer.currentPosition
                     channel.invokeMethod("audio.position", time)
                 }
