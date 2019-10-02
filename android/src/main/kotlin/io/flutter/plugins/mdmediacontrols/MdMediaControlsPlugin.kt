@@ -32,6 +32,13 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
         this.channel.setMethodCallHandler(this)
         this.context = this.registrar.context().applicationContext
         this.am = this.context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            this.mediaPlayer.setAudioAttributes(
+                    AudioAttributes
+                            .Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build())
+        }
     }
 
 
