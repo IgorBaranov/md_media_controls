@@ -182,6 +182,9 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
             }
             "stop" -> {
                 this.handler.removeCallbacks(this.sendData)
+                try {
+                    this.mediaPlayer.stop()
+                } catch (error: IllegalStateException) {}
                 this.channel.invokeMethod("audio.stop", null)
                 this.isOnPlay = false
                 return result.success(true)
