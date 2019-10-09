@@ -158,12 +158,12 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 print(this.mediaPlayer.isPlaying)
                 print(this.isSeekInProgress)
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(1.0f)
-                }
-
                 if (play) {
                     if (!this.isOnPlay) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(1.0f)
+                        }
+
                         this.isOnPlay = true
                         this.mediaPlayer.start()
                         this.handler.removeCallbacks(this.sendData)
@@ -173,6 +173,10 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     this.channel.invokeMethod("audio.play", null)
                 } else {
                     if (this.isOnPlay) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(1.0f)
+                        }
+
                         this.isOnPlay = false
                         this.mediaPlayer.pause()
                     }
