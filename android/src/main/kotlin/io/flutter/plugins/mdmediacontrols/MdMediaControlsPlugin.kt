@@ -161,7 +161,6 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(1.0f)
                 }
-                this.channel.invokeMethod("audio.rate", 1.0)
 
                 if (play) {
                     if (!this.isOnPlay) {
@@ -180,6 +179,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
 
                     this.channel.invokeMethod("audio.pause", null)
                 }
+                this.channel.invokeMethod("audio.rate", 1.0)
                 return result.success(true)
             }
             "stop" -> {
