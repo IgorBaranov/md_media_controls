@@ -18,7 +18,7 @@ import java.lang.Exception
 import java.lang.IllegalStateException
 
 
-class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : MethodCallHandler {
+class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : MethodCallHandler, AudioManager.OnAudioFocusChangeListener {
     private val mediaPlayer = MediaPlayer()
     private var uncontrolledMediaPLayer = MediaPlayer()
     private val registrar: Registrar = Registrar
@@ -28,6 +28,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     private var isSeekInProgress = false
     private val handler = Handler()
     private val context: Context
+    private var wasAudioInterrupted = false
 
     init {
         this.channel.setMethodCallHandler(this)
@@ -42,8 +43,33 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
         }
     }
 
+    private fun hasAudioFocus(): Boolean {
+        return this.am.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+    }
+
+    override fun onAudioFocusChange(focusChange: Int) {
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                pause()
+                wasAudioInterrupted = true
+            }
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                if (wasAudioInterrupted) {
+                    playPrev()
+                }
+            }
+        }
+    }
 
     companion object {
+        private const val ARG_URL = "url"
+        private const val ARG_RATE = "rate"
+        private const val ARG_IS_LOCAL = "isLocal"
+        private const val ARG_POSITION = "position"
+        private const val ARG_START_POSITION = "startPosition"
+        private const val ARG_AUTO_PLAY = "autoPlay"
+        private const val ARG_PLAY = "play"
+
         @JvmStatic
         fun registerWith(registrar: Registrar) {
             val channel = MethodChannel(registrar.messenger(), "md_media_controls")
@@ -56,11 +82,11 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
         when (call.method) {
             "play" -> {
                 val args = call.arguments as HashMap<*, *>
-                val url = args.get("url") as String
-                val rate = args.get("rate") as Double
-                val isLocal = args.get("isLocal") as Boolean
-                val startPosition = args.get("startPosition") as Double
-                val autoPlay = args.get("autoPlay") as Boolean
+                val url = args[ARG_URL] as String
+                val rate = args[ARG_RATE] as Double
+                val isLocal = args[ARG_IS_LOCAL] as Boolean
+                val startPosition = args[ARG_START_POSITION] as Double
+                val autoPlay = args[ARG_AUTO_PLAY] as Boolean
 
                 try {
                     this.mediaPlayer.stop()
@@ -69,124 +95,38 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 this.mediaPlayer.reset()
 
                 try {
-                    if (isLocal && (url.indexOf("assets") == 0 || url.indexOf("/assets") == 0)) {
-                        val assetManager = this.registrar.context().assets
-                        val key = this.registrar.lookupKeyForAsset(url)
-                        val fd = assetManager.openFd(key)
-                        if (fd.declaredLength < 0) {
-                            this.mediaPlayer.setDataSource(fd.fileDescriptor)
-                        } else {
-                            this.mediaPlayer.setDataSource(fd.fileDescriptor, fd.startOffset, fd.declaredLength)
-                        }
-                    } else {
-                        this.mediaPlayer.setDataSource(url)
-                    }
+                    setDataSource(url, isLocal)
                 } catch (error: IOException) {
                     Log.w("Play", "Invalid data source", error)
                     this.channel.invokeMethod("error", "play error")
                     return result.error("Playing error", "Invalid data source", null)
                 }
 
-                try {
-                    this.mediaPlayer.prepare()
-                    if (autoPlay) {
-                        this.mediaPlayer.start()
-                    }
-                    if (startPosition != 0.0) {
-                        this.isSeekInProgress = true
-                        val positionInMsec = startPosition * 1000
-                        this.mediaPlayer.seekTo(positionInMsec.toInt())
-                    }
-                    if (autoPlay) {
-                        this.channel.invokeMethod("audio.play", null)
-                    } else {
-                        this.channel.invokeMethod("audio.pause", null)
-                    }
-                    val duration = this.mediaPlayer.duration
-                    this.channel.invokeMethod("audio.duration", duration / 1000)
-                } catch (error: Exception) {
-                    Log.w("player", "prepare error", error)
-                }
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    if (autoPlay) {
-                        this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(rate.toFloat())
-                    }
-                    this.channel.invokeMethod("audio.rate", rate.toFloat())
-                }
-
-                this.mediaPlayer.setOnCompletionListener {
-                    this.channel.invokeMethod("audio.completed", null)
-                    this.isOnPlay = false
-                    handler.removeCallbacks(this.sendData)
-                }
-
-                this.mediaPlayer.setOnSeekCompleteListener {
-                    val time = mediaPlayer.currentPosition
-                    channel.invokeMethod("audio.position", time)
-                    this.isSeekInProgress = false
-                }
-                this.isOnPlay = autoPlay
-                this.handler.post(this.sendData)
+                play(autoPlay, startPosition, rate)
                 return result.success(true)
             }
             "pause" -> {
-                if (this.mediaPlayer?.isPlaying && this.isOnPlay) {
-                    this.isOnPlay = false
-                    this.mediaPlayer.pause()
-                    this.channel.invokeMethod("audio.pause", null)
-                    this.handler.removeCallbacks(this.sendData)
-                }
+                pause()
                 return result.success(true)
             }
             "playPrev" -> {
-                if (!this.isOnPlay) {
-                    this.isOnPlay = true
-                    this.mediaPlayer.start()
-                    this.channel.invokeMethod("audio.play", null)
-                    this.handler.post(this.sendData)
-                }
+                playPrev()
                 return result.success(true)
             }
             "seek" -> {
                 val args = call.arguments as HashMap<*, *>
-                val position = args.get("position") as Double
-                val play = args.get("play") as Boolean
-                val positionInMsec = position * 1000
-                this.isSeekInProgress = true
-                this.mediaPlayer.seekTo(positionInMsec.toInt())
-                print(this.mediaPlayer.isPlaying)
-                print(this.isSeekInProgress)
-
-                if (play) {
-                    if (!this.isOnPlay) {
-                        this.isOnPlay = true
-                        this.mediaPlayer.start()
-                        this.handler.removeCallbacks(this.sendData)
-                        this.handler.post(this.sendData)
-                    }
-                    this.channel.invokeMethod("audio.play", null)
-                } else {
-                    if (this.isOnPlay) {
-                        this.isOnPlay = false
-                        this.mediaPlayer.pause()
-                    }
-                    this.channel.invokeMethod("audio.pause", null)
-                }
+                val position = args[ARG_POSITION] as Double
+                val play = args[ARG_PLAY] as Boolean
+                seek(position, play)
                 return result.success(true)
             }
             "stop" -> {
-                this.handler.removeCallbacks(this.sendData)
-                try {
-                    this.mediaPlayer.stop()
-                } catch (error: IllegalStateException) {}
-                this.channel.invokeMethod("audio.stop", null)
-                this.isOnPlay = false
+                stop()
                 return result.success(true)
             }
             "rate" -> {
                 val args = call.arguments as HashMap<*, *>
-                val rate = args.get("rate") as Double
+                val rate = args[ARG_RATE] as Double
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(rate.toFloat())
                     this.channel.invokeMethod("audio.rate", rate.toFloat())
@@ -206,9 +146,9 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
             }
             "playUncontrolled" -> {
                 val args = call.arguments as HashMap<*, *>
-                val url = args.get("url") as String
-                val rate = args.get("rate") as Double
-                val isLocal = args.get("isLocal") as Boolean
+                val url = args[ARG_URL] as String
+                val rate = args[ARG_RATE] as Double
+                val isLocal = args[ARG_IS_LOCAL] as Boolean
 
                 try {
                     this.uncontrolledMediaPLayer.stop()
@@ -249,6 +189,121 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 result.notImplemented()
             }
         }
+    }
+
+    @Throws(IOException::class)
+    private fun setDataSource(url: String, isLocal: Boolean) {
+        if (isLocal && (url.indexOf("assets") == 0 || url.indexOf("/assets") == 0)) {
+            val assetManager = this.registrar.context().assets
+            val key = this.registrar.lookupKeyForAsset(url)
+            val fd = assetManager.openFd(key)
+            if (fd.declaredLength < 0) {
+                this.mediaPlayer.setDataSource(fd.fileDescriptor)
+            } else {
+                this.mediaPlayer.setDataSource(fd.fileDescriptor, fd.startOffset, fd.declaredLength)
+            }
+        } else {
+            this.mediaPlayer.setDataSource(url)
+        }
+    }
+
+    private fun play(autoPlay: Boolean, startPosition: Double, rate: Double) {
+        try {
+            var hasAudioFocus = false
+            this.mediaPlayer.prepare()
+            if (autoPlay) {
+                hasAudioFocus = hasAudioFocus()
+                if (hasAudioFocus) {
+                    this.mediaPlayer.start()
+                }
+            }
+            if (startPosition != 0.0) {
+                this.isSeekInProgress = true
+                val positionInMsec = startPosition * 1000
+                this.mediaPlayer.seekTo(positionInMsec.toInt())
+            }
+            if (autoPlay && hasAudioFocus) {
+                this.channel.invokeMethod("audio.play", null)
+            } else {
+                this.channel.invokeMethod("audio.pause", null)
+            }
+            val duration = this.mediaPlayer.duration
+            this.channel.invokeMethod("audio.duration", duration / 1000)
+        } catch (error: Exception) {
+            Log.w("player", "prepare error", error)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (autoPlay) {
+                this.mediaPlayer.playbackParams = this.mediaPlayer.playbackParams.setSpeed(rate.toFloat())
+            }
+            this.channel.invokeMethod("audio.rate", rate.toFloat())
+        }
+
+        this.mediaPlayer.setOnCompletionListener {
+            this.channel.invokeMethod("audio.completed", null)
+            this.isOnPlay = false
+            handler.removeCallbacks(this.sendData)
+        }
+
+        this.mediaPlayer.setOnSeekCompleteListener {
+            val time = mediaPlayer.currentPosition
+            channel.invokeMethod("audio.position", time)
+            this.isSeekInProgress = false
+        }
+        this.isOnPlay = autoPlay
+        this.handler.post(this.sendData)
+    }
+
+    private fun pause() {
+        if (this.mediaPlayer.isPlaying && this.isOnPlay) {
+            this.isOnPlay = false
+            this.mediaPlayer.pause()
+            this.channel.invokeMethod("audio.pause", null)
+            this.handler.removeCallbacks(this.sendData)
+        }
+    }
+
+    private fun playPrev() {
+        if (!this.isOnPlay && hasAudioFocus()) {
+            this.isOnPlay = true
+            this.mediaPlayer.start()
+            this.channel.invokeMethod("audio.play", null)
+            this.handler.post(this.sendData)
+        }
+    }
+
+    private fun seek(position: Double, play: Boolean) {
+        val positionInMsec = position * 1000
+        this.isSeekInProgress = true
+        this.mediaPlayer.seekTo(positionInMsec.toInt())
+        print(this.mediaPlayer.isPlaying)
+        print(this.isSeekInProgress)
+
+        if (play) {
+            if (!this.isOnPlay && hasAudioFocus()) {
+                this.isOnPlay = true
+                this.mediaPlayer.start()
+                this.handler.removeCallbacks(this.sendData)
+                this.handler.post(this.sendData)
+            }
+            this.channel.invokeMethod("audio.play", null)
+        } else {
+            if (this.isOnPlay) {
+                this.isOnPlay = false
+                this.mediaPlayer.pause()
+            }
+            this.channel.invokeMethod("audio.pause", null)
+        }
+    }
+
+    private fun stop() {
+        this.handler.removeCallbacks(this.sendData)
+        try {
+            this.mediaPlayer.stop()
+        } catch (error: IllegalStateException) {}
+        this.channel.invokeMethod("audio.stop", null)
+        this.isOnPlay = false
     }
 
     private val sendData = object : Runnable {
