@@ -1,6 +1,9 @@
 package io.flutter.plugins.mdmediacontrols
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -41,24 +44,9 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                             .build())
         }
-    }
 
-    private fun hasAudioFocus(): Boolean {
-        return this.am.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-    }
-
-    override fun onAudioFocusChange(focusChange: Int) {
-        when (focusChange) {
-            AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                pause()
-                wasAudioInterrupted = true
-            }
-            AudioManager.AUDIOFOCUS_GAIN -> {
-                if (wasAudioInterrupted) {
-                    playPrev()
-                }
-            }
-        }
+        val filter = IntentFilter(Intent.ACTION_HEADSET_PLUG)
+        context.registerReceiver(HeadsetReceiver(), filter)
     }
 
     companion object {
@@ -75,7 +63,24 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
             val channel = MethodChannel(registrar.messenger(), "md_media_controls")
             channel.setMethodCallHandler(MdMediaControlsPlugin(channel, registrar))
         }
+    }
 
+    override fun onAudioFocusChange(focusChange: Int) {
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                pause()
+                wasAudioInterrupted = true
+            }
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                if (wasAudioInterrupted) {
+                    playPrev()
+                }
+            }
+        }
+    }
+
+    private fun hasAudioFocus(): Boolean {
+        return this.am.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
     }
 
     override fun onMethodCall(call: MethodCall, result: Result) {
@@ -322,6 +327,19 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 Log.w("player", "Handler error", error)
             }
 
+        }
+    }
+
+    inner class HeadsetReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            intent?.let {
+                if (it.action == Intent.ACTION_HEADSET_PLUG) {
+                    val state = intent.getIntExtra("state", -1)
+                    if (state == 0) {
+                        pause()
+                    }
+                }
+            }
         }
     }
 }
