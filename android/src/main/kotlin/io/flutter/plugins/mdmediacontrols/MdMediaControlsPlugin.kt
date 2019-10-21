@@ -45,7 +45,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                             .build())
         }
 
-        val filter = IntentFilter(Intent.ACTION_HEADSET_PLUG)
+        val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
         context.registerReceiver(HeadsetReceiver(), filter)
     }
 
@@ -68,12 +68,15 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     override fun onAudioFocusChange(focusChange: Int) {
         when (focusChange) {
             AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                pause()
-                wasAudioInterrupted = true
+                if (isOnPlay) {
+                    pause()
+                    wasAudioInterrupted = true
+                }
             }
             AudioManager.AUDIOFOCUS_GAIN -> {
-                if (wasAudioInterrupted) {
+                if (!isOnPlay && wasAudioInterrupted) {
                     playPrev()
+                    wasAudioInterrupted = false
                 }
             }
         }
@@ -213,6 +216,8 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     }
 
     private fun play(autoPlay: Boolean, startPosition: Double, rate: Double) {
+        wasAudioInterrupted = false
+
         try {
             var hasAudioFocus = false
             this.mediaPlayer.prepare()
@@ -333,11 +338,8 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     inner class HeadsetReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let {
-                if (it.action == Intent.ACTION_HEADSET_PLUG) {
-                    val state = intent.getIntExtra("state", -1)
-                    if (state == 0) {
-                        pause()
-                    }
+                if (it.action ==  AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
+                    pause()
                 }
             }
         }
