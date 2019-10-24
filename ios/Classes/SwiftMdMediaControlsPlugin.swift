@@ -136,6 +136,11 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                         let currentTime = CMTimeGetSeconds(playerItem.currentTime());
                         self.channel.invokeMethod("audio.position", arguments: Int(currentTime * 1000));
                     });
+                } else {
+                    self.stopAppTimeObserver();
+                    let seekTime = CMTimeMakeWithSeconds(startPosition, 1000)
+                    self.startAppTimeObserver(channel: self.channel, lastSeekTime: seekTime);
+                    self.channel.invokeMethod("audio.position", arguments: 0);
                 }
                 self.channel.invokeMethod("audio.duration", arguments: Int(duration));
             });
