@@ -337,7 +337,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
     }
     
     @objc func startAppTimeObserver(channel: FlutterMethodChannel, lastSeekTime: CMTime) {
-        playerTimeObserver = player.addPeriodicTimeObserver(forInterval: CMTimeMakeWithSeconds(0.1, Int32(NSEC_PER_SEC)), queue: nil) {
+        playerTimeObserver = player.addPeriodicTimeObserver(forInterval: CMTimeMakeWithSeconds(0.05, Int32(NSEC_PER_SEC)), queue: nil) {
             time in
             if (!seekInProgress && CMTimeCompare(lastSeekTime, time) <= 0) {
                 if let tt = playerItem {

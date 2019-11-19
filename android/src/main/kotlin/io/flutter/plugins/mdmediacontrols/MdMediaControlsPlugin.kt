@@ -327,7 +327,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                     val time = mediaPlayer.currentPosition
                     channel.invokeMethod("audio.position", time)
                 }
-                handler.postDelayed(this, 100)
+                handler.postDelayed(this, 50)
             } catch (error: Exception) {
                 Log.w("player", "Handler error", error)
             }
