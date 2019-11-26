@@ -29,6 +29,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     private val am: AudioManager
     private var isOnPlay = false
     private var isSeekInProgress = false
+    private var lastSeekPosition = 0
     private val handler = Handler()
     private val context: Context
     private var wasAudioInterrupted = false
@@ -230,6 +231,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
             if (startPosition != 0.0) {
                 this.isSeekInProgress = true
                 val positionInMsec = startPosition * 1000
+                lastSeekPosition = positionInMsec.toInt()
                 this.mediaPlayer.seekTo(positionInMsec.toInt())
             }
             if (autoPlay && hasAudioFocus) {
@@ -258,6 +260,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
 
         this.mediaPlayer.setOnSeekCompleteListener {
             val time = mediaPlayer.currentPosition
+            lastSeekPosition = time
             channel.invokeMethod("audio.position", time)
             this.isSeekInProgress = false
         }
@@ -286,9 +289,8 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     private fun seek(position: Double, play: Boolean) {
         val positionInMsec = position * 1000
         this.isSeekInProgress = true
+        lastSeekPosition = positionInMsec.toInt()
         this.mediaPlayer.seekTo(positionInMsec.toInt())
-        print(this.mediaPlayer.isPlaying)
-        print(this.isSeekInProgress)
 
         if (play) {
             if (!this.isOnPlay && hasAudioFocus()) {
@@ -325,13 +327,14 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 }
                 if (!this@MdMediaControlsPlugin.isSeekInProgress) {
                     val time = mediaPlayer.currentPosition
-                    channel.invokeMethod("audio.position", time)
+                    if (time >= lastSeekPosition) {
+                        channel.invokeMethod("audio.position", time)
+                    }
                 }
                 handler.postDelayed(this, 50)
             } catch (error: Exception) {
                 Log.w("player", "Handler error", error)
             }
-
         }
     }
 
