@@ -96,6 +96,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 val isLocal = args[ARG_IS_LOCAL] as Boolean
                 val startPosition = args[ARG_START_POSITION] as Double
                 val autoPlay = args[ARG_AUTO_PLAY] as Boolean
+                lastSeekPosition = 0
 
                 try {
                     this.mediaPlayer.stop()
@@ -271,6 +272,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     private fun pause() {
         if (this.mediaPlayer.isPlaying && this.isOnPlay) {
             this.isOnPlay = false
+            this.lastSeekPosition = 0
             this.mediaPlayer.pause()
             this.channel.invokeMethod("audio.pause", null)
             this.handler.removeCallbacks(this.sendData)
@@ -279,6 +281,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
 
     private fun playPrev() {
         if (!this.isOnPlay && hasAudioFocus()) {
+            this.lastSeekPosition = 0
             this.isOnPlay = true
             this.mediaPlayer.start()
             this.channel.invokeMethod("audio.play", null)
@@ -310,6 +313,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     }
 
     private fun stop() {
+        lastSeekPosition = 0
         this.handler.removeCallbacks(this.sendData)
         try {
             this.mediaPlayer.stop()
