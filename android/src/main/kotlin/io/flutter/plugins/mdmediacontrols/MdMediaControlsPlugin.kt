@@ -272,7 +272,6 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
     private fun pause() {
         if (this.mediaPlayer.isPlaying && this.isOnPlay) {
             this.isOnPlay = false
-            this.lastSeekPosition = 0
             this.mediaPlayer.pause()
             this.channel.invokeMethod("audio.pause", null)
             this.handler.removeCallbacks(this.sendData)
@@ -281,7 +280,6 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
 
     private fun playPrev() {
         if (!this.isOnPlay && hasAudioFocus()) {
-            this.lastSeekPosition = 0
             this.isOnPlay = true
             this.mediaPlayer.start()
             this.channel.invokeMethod("audio.play", null)
