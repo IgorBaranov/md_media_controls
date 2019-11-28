@@ -198,7 +198,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             return result(true);
         case "seek":
             if (seekInProgress) {return result(false);}
-            
+
             seekInProgress = true;
             self.stopAppTimeObserver();
             let args = (call.arguments as! NSDictionary);
@@ -252,11 +252,11 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         case "info":
             let args = (call.arguments as! NSDictionary);
             UIApplication.shared.beginReceivingRemoteControlEvents();
-           
+
             if let title = args.value(forKey: "title") {
                 mediaInfoData[MPMediaItemPropertyTitle] = title as! String;
             }
-            
+
             if let artist = args.value(forKey: "artist") {
                 mediaInfoData[MPMediaItemPropertyArtist] = artist as! String;
             }
@@ -315,12 +315,12 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             } else {
                 uncontrolledPlayerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!);
             }
-            
-            
+
+
             uncontrolledPlayer.replaceCurrentItem(with: uncontrolledPlayerItem);
             let rate = args.object(forKey: "rate") as! Double;
             uncontrolledPlayer.rate = Float(rate);
-            
+
             if #available(iOS 10.0, *) {
                 uncontrolledPlayer.playImmediately(atRate: Float(rate))
             } else {
@@ -331,12 +331,13 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             result(FlutterMethodNotImplemented)
         }
     }
-    
+
     @objc func playerDidFinishPlaying(note: NSNotification){
         channel.invokeMethod("audio.completed", arguments: nil)
     }
-    
+
     @objc func startAppTimeObserver(channel: FlutterMethodChannel, lastSeekTime: CMTime) {
+        var lastProgressTime = 0
         playerTimeObserver = player.addPeriodicTimeObserver(forInterval: CMTimeMakeWithSeconds(0.05, Int32(NSEC_PER_SEC)), queue: nil) {
             time in
             if (!seekInProgress && CMTimeCompare(lastSeekTime, time) <= 0) {
@@ -345,7 +346,11 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                         let currentTime = CMTimeGetSeconds(tt.currentTime());
                         mediaInfoData[MPNowPlayingInfoPropertyElapsedPlaybackTime]  = currentTime;
                         MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
-                        channel.invokeMethod("audio.position", arguments: Int(currentTime * 1000));
+                        let timeMs = Int(currentTime * 1000)
+                        if (timeMs >= lastProgressTime) {
+                            lastProgressTime = timeMs
+                            channel.invokeMethod("audio.position", arguments: timeMs);
+                        }
                     }
                 }
             }
