@@ -13,6 +13,7 @@ var playerTimeObserver: Any?;
 var playerItem: AVPlayerItem?;
 var mediaInfoData = [String: Any]();
 var seekInProgress = false;
+var lastProgressTime = 0
 
 public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
     var registrar: FlutterPluginRegistrar;
@@ -93,97 +94,101 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
     public func handle(_ call: FlutterMethodCall, result: FlutterResult) {
         switch call.method {
         case "play":
-            seekInProgress = false;
+            seekInProgress = false
+            lastProgressTime = 0
             self.channel.invokeMethod("audio.prepare", arguments: nil)
-            
+
             NotificationCenter.default.removeObserver(self)
-            
+
             if let tt = playerItemObserver {
-                tt.invalidate();
+                tt.invalidate()
             }
 
-            let args = (call.arguments as! NSDictionary);
-            let urlString = args.object(forKey: "url") as! String;
-            let startPosition = args.object(forKey: "startPosition") as! Double;
-            let autoPlay = args.object(forKey: "autoPlay") as! Bool;
+            let args = (call.arguments as! NSDictionary)
+            let urlString = args.object(forKey: "url") as! String
+            let startPosition = args.object(forKey: "startPosition") as! Double
+            let autoPlay = args.object(forKey: "autoPlay") as! Bool
             if let range = urlString.range(of: "assets") {
-                let position = urlString.distance(from: urlString.startIndex, to: range.lowerBound);
+                let position = urlString.distance(from: urlString.startIndex, to: range.lowerBound)
                 if (position == 1 || position == 0) {
-                    let asset = self.registrar.lookupKey(forAsset: urlString);
-                    let path = Bundle.main.path(forAuxiliaryExecutable: asset);
-                    playerItem = AVPlayerItem(url: URL(fileURLWithPath: path!));
+                    let asset = self.registrar.lookupKey(forAsset: urlString)
+                    let path = Bundle.main.path(forAuxiliaryExecutable: asset)
+                    playerItem = AVPlayerItem(url: URL(fileURLWithPath: path!))
                 } else {
-                    playerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!);
+                    playerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!)
                 }
             } else {
-                playerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!);
+                playerItem = AVPlayerItem(url: args.object(forKey: "isLocal") as! Int == 1 ? URL(fileURLWithPath: urlString) : URL(string: urlString)!)
             }
-            playerItem?.audioTimePitchAlgorithm = AVAudioTimePitchAlgorithm.varispeed;
+            playerItem?.audioTimePitchAlgorithm = AVAudioTimePitchAlgorithm.varispeed
 
             playerItemObserver = playerItem?.observe(\.status, options: [.new, .old], changeHandler: { (playerItem, change) in
-                if (playerItem.loadedTimeRanges.count == 0) {return;}
+                if (playerItem.loadedTimeRanges.count == 0) {
+                    return;
+                }
+
                 let timeRange = playerItem.loadedTimeRanges[0].timeRangeValue
                 let duration = CMTimeGetSeconds(timeRange.duration)
                 if (startPosition != 0.0) {
-                    seekInProgress = true;
-                    self.stopAppTimeObserver();
-                    
+                    seekInProgress = true
+                    self.stopAppTimeObserver()
+
                     let seekTime = CMTimeMakeWithSeconds(startPosition, 1000)
                     playerItem.seek(to: seekTime, toleranceBefore: kCMTimeZero, toleranceAfter: kCMTimeZero, completionHandler: {
                         (_: Bool) -> Void in
-                        seekInProgress = false;
-                        self.startAppTimeObserver(channel: self.channel, lastSeekTime: seekTime);
-                        let currentTime = CMTimeGetSeconds(playerItem.currentTime());
-                        self.channel.invokeMethod("audio.position", arguments: Int(currentTime * 1000));
+                        seekInProgress = false
+                        self.startAppTimeObserver(channel: self.channel, lastSeekTime: seekTime)
+                        let currentTime = CMTimeGetSeconds(playerItem.currentTime())
+                        self.channel.invokeMethod("audio.position", arguments: Int(currentTime * 1000))
                     });
                 } else {
-                    self.stopAppTimeObserver();
+                    self.stopAppTimeObserver()
                     let seekTime = CMTimeMakeWithSeconds(startPosition, 1000)
-                    self.startAppTimeObserver(channel: self.channel, lastSeekTime: seekTime);
-                    self.channel.invokeMethod("audio.position", arguments: 0);
+                    self.startAppTimeObserver(channel: self.channel, lastSeekTime: seekTime)
+                    self.channel.invokeMethod("audio.position", arguments: 0)
                 }
-                self.channel.invokeMethod("audio.duration", arguments: Int(duration));
+                self.channel.invokeMethod("audio.duration", arguments: Int(duration))
             });
 
-            NotificationCenter.default.addObserver(self, selector:#selector(self.playerDidFinishPlaying), name:NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: playerItem);
+            NotificationCenter.default.addObserver(self, selector:#selector(self.playerDidFinishPlaying), name:NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: playerItem)
 
 
-            player.replaceCurrentItem(with: playerItem);
-            let rate = args.object(forKey: "rate") as! Double;
+            player.replaceCurrentItem(with: playerItem)
+            let rate = args.object(forKey: "rate") as! Double
             if (autoPlay) {
-                player.rate = Float(rate);
+                player.rate = Float(rate)
             }
-            self.currentRate = rate;
-            UIApplication.shared.beginReceivingRemoteControlEvents();
-            mediaInfoData[MPNowPlayingInfoPropertyElapsedPlaybackTime] = playerItem?.currentTime().seconds;
-            mediaInfoData[MPMediaItemPropertyPlaybackDuration] = playerItem?.asset.duration.seconds;
-            mediaInfoData[MPNowPlayingInfoPropertyPlaybackRate] = player.rate;
+            self.currentRate = rate
+            UIApplication.shared.beginReceivingRemoteControlEvents()
+            mediaInfoData[MPNowPlayingInfoPropertyElapsedPlaybackTime] = playerItem?.currentTime().seconds
+            mediaInfoData[MPMediaItemPropertyPlaybackDuration] = playerItem?.asset.duration.seconds
+            mediaInfoData[MPNowPlayingInfoPropertyPlaybackRate] = player.rate
 
             if (autoPlay) {
                 if #available(iOS 10.0, *) {
                     player.playImmediately(atRate: Float(rate))
                 } else {
-                    player.play();
+                    player.play()
                 };
             }
 
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData
             self.channel.invokeMethod("audio.rate", arguments: 1.0)
 
             do {
-                try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback, with: []);
-                try AVAudioSession.sharedInstance().setActive(true);
+                try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback, with: [])
+                try AVAudioSession.sharedInstance().setActive(true)
                 if (autoPlay) {
-                    self.channel.invokeMethod("audio.play", arguments: nil);
+                    self.channel.invokeMethod("audio.play", arguments: nil)
                 } else {
-                    self.channel.invokeMethod("audio.pause", arguments: nil);
+                    self.channel.invokeMethod("audio.pause", arguments: nil)
                 }
             } catch let error {
-                print(error);
-                self.channel.invokeMethod("error", arguments: error.localizedDescription);
-                return result(false);
+                print(error)
+                self.channel.invokeMethod("error", arguments: error.localizedDescription)
+                return result(false)
             }
-            return result(true);
+            return result(true)
         case "pause":
             player.pause();
             self.channel.invokeMethod("audio.pause", arguments: nil);
@@ -227,10 +232,11 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             self.channel.invokeMethod("audio.rate", arguments: Float(self.currentRate));
             return result(true);
         case "stop":
-            player.pause();
-            player.replaceCurrentItem(with: nil);
-            UIApplication.shared.endReceivingRemoteControlEvents();
-            return result(true);
+            lastProgressTime = 0
+            player.pause()
+            player.replaceCurrentItem(with: nil)
+            UIApplication.shared.endReceivingRemoteControlEvents()
+            return result(true)
         case "rate":
             let args = (call.arguments as! NSDictionary);
             let rate = args.object(forKey: "rate") as! Double;
@@ -337,8 +343,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
     }
 
     @objc func startAppTimeObserver(channel: FlutterMethodChannel, lastSeekTime: CMTime) {
-        var lastProgressTime = 0
-        playerTimeObserver = player.addPeriodicTimeObserver(forInterval: CMTimeMakeWithSeconds(0.05, Int32(NSEC_PER_SEC)), queue: nil) {
+        lastProgressTime = 0
+        playerTimeObserver = player.addPeriodicTimeObserver(forInterval: CMTimeMakeWithSeconds(0.05, Int32(NSEC_PER_SEC)), queue: nil) { [weak self]
             time in
             if (!seekInProgress && CMTimeCompare(lastSeekTime, time) <= 0) {
                 if let tt = playerItem {
@@ -347,8 +353,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                         mediaInfoData[MPNowPlayingInfoPropertyElapsedPlaybackTime]  = currentTime;
                         MPNowPlayingInfoCenter.default().nowPlayingInfo = mediaInfoData;
                         let timeMs = Int(currentTime * 1000)
-                        if (timeMs >= lastProgressTime) {
-                            lastProgressTime = timeMs
+                        if (timeMs >= self?.lastProgressTime ?? 0) {
+                            self?.lastProgressTime = timeMs
                             channel.invokeMethod("audio.position", arguments: timeMs);
                         }
                     }
@@ -356,9 +362,10 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             }
         }
     }
-    
+
     @objc func stopAppTimeObserver() {
         if let tt = playerTimeObserver {
+            lastProgressTime = 0
             player.removeTimeObserver(tt);
             playerTimeObserver = nil;
         }
