@@ -13,12 +13,12 @@ var playerTimeObserver: Any?;
 var playerItem: AVPlayerItem?;
 var mediaInfoData = [String: Any]();
 var seekInProgress = false;
-var lastProgressTime = 0
 
 public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
     var registrar: FlutterPluginRegistrar;
     var currentRate: Double = 0.0;
     var channel: FlutterMethodChannel;
+    var lastProgressTime = 0
 
 
     init(pluginRegistrar: FlutterPluginRegistrar, pluginChannel: FlutterMethodChannel) {
