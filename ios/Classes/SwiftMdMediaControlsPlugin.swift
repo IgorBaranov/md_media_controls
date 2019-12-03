@@ -19,6 +19,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
     var currentRate: Double = 0.0;
     var channel: FlutterMethodChannel;
     var lastProgressTime = 0
+    var lastSeekTime : CMTime? = nil
+    var lastTimeRangeDuration = 0
 
 
     init(pluginRegistrar: FlutterPluginRegistrar, pluginChannel: FlutterMethodChannel) {
@@ -96,6 +98,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         case "play":
             seekInProgress = false
             lastProgressTime = 0
+            lastSeekTime = nil
             self.channel.invokeMethod("audio.prepare", arguments: nil)
 
             NotificationCenter.default.removeObserver(self)
@@ -137,16 +140,19 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                     playerItem.seek(to: seekTime, toleranceBefore: kCMTimeZero, toleranceAfter: kCMTimeZero, completionHandler: {
                         (_: Bool) -> Void in
                         seekInProgress = false
-                        self.startAppTimeObserver(channel: self.channel, lastSeekTime: seekTime)
+                        self.lastSeekTime = seekTime
+                        self.startAppTimeObserver(channel: self.channel)
                         let currentTime = CMTimeGetSeconds(playerItem.currentTime())
                         self.channel.invokeMethod("audio.position", arguments: Int(currentTime * 1000))
                     });
                 } else {
                     self.stopAppTimeObserver()
                     let seekTime = CMTimeMakeWithSeconds(startPosition, 1000)
-                    self.startAppTimeObserver(channel: self.channel, lastSeekTime: seekTime)
+                    self.lastSeekTime = seekTime
+                    self.startAppTimeObserver(channel: self.channel)
                     self.channel.invokeMethod("audio.position", arguments: 0)
                 }
+                self.lastTimeRangeDuration = Int(duration)
                 self.channel.invokeMethod("audio.duration", arguments: Int(duration))
             });
 
@@ -214,7 +220,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                 let seekTime = CMTimeMakeWithSeconds(position, 1000)
                 tt.seek(to: seekTime, toleranceBefore: kCMTimeZero, toleranceAfter: kCMTimeZero, completionHandler: {
                     (_: Bool) -> Void in
-                        self.startAppTimeObserver(channel: self.channel, lastSeekTime: seekTime);
+                        self.lastSeekTime = seekTime
+                        self.startAppTimeObserver(channel: self.channel);
                         seekInProgress = false;
                         let currentTime = CMTimeGetSeconds(tt.currentTime());
                         self.channel.invokeMethod("audio.position", arguments: Int(currentTime * 1000));
@@ -342,11 +349,25 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         channel.invokeMethod("audio.completed", arguments: nil)
     }
 
-    @objc func startAppTimeObserver(channel: FlutterMethodChannel, lastSeekTime: CMTime) {
+    @objc func startAppTimeObserver(channel: FlutterMethodChannel) {
         lastProgressTime = 0
         playerTimeObserver = player.addPeriodicTimeObserver(forInterval: CMTimeMakeWithSeconds(0.05, Int32(NSEC_PER_SEC)), queue: nil) { [weak self]
             time in
-            if (!seekInProgress && CMTimeCompare(lastSeekTime, time) <= 0) {
+
+            if let item = playerItem {
+                if (!item.loadedTimeRanges.isEmpty) {
+                    let timeRange = item.loadedTimeRanges[0].timeRangeValue
+                    let duration = Int(CMTimeGetSeconds(timeRange.duration))
+                    let lastDuration = self?.lastTimeRangeDuration ?? 0
+                    if (duration != lastDuration) {
+                        self?.lastTimeRangeDuration = duration
+                        self?.channel.invokeMethod("audio.duration", arguments: duration)
+                    }
+                }
+            }
+
+            let lastSeek = self?.lastSeekTime ?? time
+            if (!seekInProgress && CMTimeCompare(lastSeek, time) <= 0) {
                 if let tt = playerItem {
                     if (tt.status == .readyToPlay) {
                         let currentTime = CMTimeGetSeconds(tt.currentTime());
