@@ -163,6 +163,8 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
 
             NotificationCenter.default.addObserver(self, selector:#selector(self.playerDidFinishPlaying), name:NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: playerItem)
             NotificationCenter.default.addObserver(self, selector:#selector(self.handleInterruption(notification:)), name:NSNotification.Name.AVAudioSessionInterruption, object: AVAudioSession.sharedInstance())
+            NotificationCenter.default.addObserver(self, selector:#selector(self.audioRouteChanged), name: NSNotification.Name.AVAudioSessionRouteChange, object: nil)
+
 
             player.replaceCurrentItem(with: playerItem)
             let rate = args.object(forKey: "rate") as! Double
@@ -354,7 +356,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
     }
 
 
-    @objc func handleInterruption(notification: NSNotification){
+    @objc func handleInterruption(notification: NSNotification) {
         guard let info = notification.userInfo,
             let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
             let type = AVAudioSessionInterruptionType(rawValue: typeValue) else {
@@ -375,12 +377,33 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                 } else {
                     player.play();
                 }
-                self.channel.invokeMethod("audio.play", arguments: nil);
+                channel.invokeMethod("audio.play", arguments: nil);
             }
         }
     }
 
-    @objc func playerDidFinishPlaying(note: NSNotification){
+    @objc func audioRouteChanged(notification: Notification) {
+        guard let userInfo = notification.userInfo,
+            let reasonValue = userInfo[AVAudioSessionRouteChangeReasonKey] as? UInt,
+            let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else {
+            return
+        }
+
+        if reason == .oldDeviceUnavailable {
+            if let previousRoute = userInfo[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription {
+                let wasHeadphonesConnected = isHeadphones(in: previousRoute)
+                if (wasHeadphonesConnected) {
+                    channel.invokeMethod("audio.pause", arguments: nil)
+                }
+            }
+        }
+    }
+
+    func isHeadphones(in routeDescription: AVAudioSessionRouteDescription) -> Bool {
+        return !routeDescription.outputs.filter({$0.portType == AVAudioSessionPortHeadphones}).isEmpty
+    }
+
+    @objc func playerDidFinishPlaying(note: NSNotification) {
         channel.invokeMethod("audio.completed", arguments: nil)
         channel.invokeMethod("audio.stop", arguments: nil)
     }
