@@ -162,6 +162,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             });
 
             NotificationCenter.default.addObserver(self, selector:#selector(self.playerDidFinishPlaying), name:NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: playerItem)
+            NotificationCenter.default.addObserver(self, selector:#selector(self.handleInterruption(note:)), name:NSNotification.Name.AVAudioSessionInterruption, object: AVAudioSession.sharedInstance())
 
 
             player.replaceCurrentItem(with: playerItem)
@@ -351,6 +352,12 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
         default:
             result(FlutterMethodNotImplemented)
         }
+    }
+
+
+    @objc func handleInterruption(note: NSNotification){
+        player.pause();
+        channel.invokeMethod("audio.pause", arguments: nil);
     }
 
     @objc func playerDidFinishPlaying(note: NSNotification){
