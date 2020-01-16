@@ -382,6 +382,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
 
     @objc func playerDidFinishPlaying(note: NSNotification){
         channel.invokeMethod("audio.completed", arguments: nil)
+        channel.invokeMethod("audio.stop", arguments: nil)
     }
 
     @objc func startAppTimeObserver(channel: FlutterMethodChannel) {
