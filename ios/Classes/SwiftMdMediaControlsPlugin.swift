@@ -162,8 +162,7 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             });
 
             NotificationCenter.default.addObserver(self, selector:#selector(self.playerDidFinishPlaying), name:NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: playerItem)
-            NotificationCenter.default.addObserver(self, selector:#selector(self.handleInterruption(note:)), name:NSNotification.Name.AVAudioSessionInterruption, object: AVAudioSession.sharedInstance())
-
+            NotificationCenter.default.addObserver(self, selector:#selector(self.handleInterruption(notification:)), name:NSNotification.Name.AVAudioSessionInterruption, object: AVAudioSession.sharedInstance())
 
             player.replaceCurrentItem(with: playerItem)
             let rate = args.object(forKey: "rate") as! Double
@@ -355,9 +354,30 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
     }
 
 
-    @objc func handleInterruption(note: NSNotification){
-        player.pause();
-        channel.invokeMethod("audio.pause", arguments: nil);
+    @objc func handleInterruption(notification: NSNotification){
+        guard let info = notification.userInfo,
+            let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+            let type = AVAudioSessionInterruptionType(rawValue: typeValue) else {
+                return
+        }
+
+        if type == .began {
+            player.pause();
+            channel.invokeMethod("audio.pause", arguments: nil);
+        } else if type == .ended {
+            guard let optionsValue = info[AVAudioSessionInterruptionOptionKey] as? UInt else {
+                return
+            }
+            let options = AVAudioSessionInterruptionOptions(rawValue: optionsValue)
+            if options.contains(.shouldResume) {
+                if #available(iOS 10.0, *) {
+                    player.playImmediately(atRate: Float(self.currentRate));
+                } else {
+                    player.play();
+                }
+                self.channel.invokeMethod("audio.play", arguments: nil);
+            }
+        }
     }
 
     @objc func playerDidFinishPlaying(note: NSNotification){
