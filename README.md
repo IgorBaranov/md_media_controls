@@ -1,6 +1,6 @@
 # md_media_controls
+A new Flutter plugin was created while using the framework to develop [cross-platform apps at MobiDev] (https://mobidev.biz/services/cross-platform-app-development)
 
-A new flutter plugin project created by [MobiDev](https://mobidev.biz/services/cross-platform-app-development) 
 ## Getting Started
 
 This project is a starting point for a Flutter
