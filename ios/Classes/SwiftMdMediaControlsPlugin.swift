@@ -350,6 +350,9 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
                 uncontrolledPlayer.play();
             };
             return result(true);
+        case: 'stopUncontrolled':
+            uncontrolledPlayer.rate = 0;
+            return result(true);
         default:
             result(FlutterMethodNotImplemented)
         }
