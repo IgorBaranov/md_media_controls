@@ -4,39 +4,28 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:meta/meta.dart';
 
-enum ControlsState {
-  STOPPED,
-  PLAYING,
-  PAUSED,
-  PREPARE,
-  COMPLETED,
-  ERROR
-}
+enum ControlsState { STOPPED, PLAYING, PAUSED, PREPARE, COMPLETED, ERROR }
 
-enum ControlsActions {
-  PREV,
-  NEXT
-}
+enum ControlsActions { PREV, NEXT }
 
 const MethodChannel _CHANNEL = const MethodChannel('md_media_controls');
 
-const _protocols = [ 'http', 'https', 'ftp'];
-
+const _protocols = ['http', 'https', 'ftp'];
 
 class MdMediaControls {
-
   Duration _duration = Duration();
 
-  final StreamController<
-      ControlsState> _playerStateController = StreamController.broadcast();
+  final StreamController<ControlsState> _playerStateController =
+      StreamController.broadcast();
 
-  final StreamController<double> _playerRateController = StreamController.broadcast();
+  final StreamController<double> _playerRateController =
+      StreamController.broadcast();
 
-  final StreamController<Duration> _positionController = StreamController
-      .broadcast();
+  final StreamController<Duration> _positionController =
+      StreamController.broadcast();
 
-  final StreamController<ControlsActions> _controlsController = StreamController
-      .broadcast();
+  final StreamController<ControlsActions> _controlsController =
+      StreamController.broadcast();
 
   ControlsState _state = ControlsState.STOPPED;
 
@@ -103,7 +92,11 @@ class MdMediaControls {
     }
   }
 
-  Future<void> playNew({@required String url, double rate = 1.0, double startPosition = 0.0, bool autoPlay = true}) async =>
+  Future<void> playNew(
+          {@required String url,
+          double rate = 1.0,
+          double startPosition = 0.0,
+          bool autoPlay = true}) async =>
       await _CHANNEL.invokeMethod('play', {
         'url': url,
         'isLocal': !_protocols.contains(url.split('://').first),
@@ -119,8 +112,7 @@ class MdMediaControls {
         'rate': rate
       });
 
-  Future<void> play() async =>
-      await _CHANNEL.invokeMethod('playPrev');
+  Future<void> play() async => await _CHANNEL.invokeMethod('playPrev');
 
   Future<void> pause() async => await _CHANNEL.invokeMethod('pause');
 
@@ -149,20 +141,19 @@ class MdMediaControls {
     });
   }
 
-  Future<void> infoControls({
-    bool pause = true,
-    bool play = true,
-    bool prev = true,
-    bool next = true,
-    bool position = true
-  }) async => await _CHANNEL.invokeMethod('infoControls', {
-    'pause': pause,
-    'play': play,
-    'prev': prev,
-    'next': next,
-    'position': position
-  });
+  Future<void> infoControls(
+          {bool pause = true,
+          bool play = true,
+          bool prev = true,
+          bool next = true,
+          bool position = true}) async =>
+      await _CHANNEL.invokeMethod('infoControls', {
+        'pause': pause,
+        'play': play,
+        'prev': prev,
+        'next': next,
+        'position': position
+      });
 
   Future<void> clearInfo() async => await _CHANNEL.invokeMethod('clearInfo');
-
 }
