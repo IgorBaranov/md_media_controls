@@ -112,6 +112,8 @@ class MdMediaControls {
         'rate': rate
       });
 
+  Future<void> stopUncontrolled() async => await _CHANNEL.invokeMethod('stopUncontrolled');
+
   Future<void> play() async => await _CHANNEL.invokeMethod('playPrev');
 
   Future<void> pause() async => await _CHANNEL.invokeMethod('pause');
