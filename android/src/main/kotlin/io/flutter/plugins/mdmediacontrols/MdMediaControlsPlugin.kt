@@ -195,7 +195,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 }
                 return result.success(true)
             }
-            "stopUnctontrolled" -> {
+            "stopUncontrolled" -> {
                 try {
                     this.uncontrolledMediaPLayer.stop()
                 } catch (error: Exception) {
