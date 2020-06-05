@@ -201,6 +201,7 @@ class MdMediaControlsPlugin(Channel: MethodChannel, Registrar: Registrar) : Meth
                 } catch (error: Exception) {
 
                 }
+                return result.success(true)
             }
             else -> {
                 result.notImplemented()
