@@ -349,6 +349,16 @@ public class SwiftMdMediaControlsPlugin: NSObject, FlutterPlugin {
             } else {
                 uncontrolledPlayer.play();
             };
+
+            do {
+                try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback, with: [])
+                try AVAudioSession.sharedInstance().setActive(true)
+            } catch let error {
+                print(error)
+                self.channel.invokeMethod("error", arguments: error.localizedDescription)
+                return result(false)
+            }
+
             return result(true);
         case "stopUncontrolled":
             uncontrolledPlayer.rate = 0;
